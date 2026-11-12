@@ -9,6 +9,7 @@ import pandas as pd
 import requests
 from shapely.geometry import LineString
 
+from config import LINHAS_CORREDOR, MARGEM_TERMINAL, VARIANTES_EXCLUIDAS
 
 
 # 1. Download e Extração Automática do GTFS
@@ -26,6 +27,7 @@ arquivos_obrigatorios = [
     "trips.txt",
     "shapes.txt",
     "stop_times.txt",
+    "calendar.txt",
 ]
 
 print("Verificando arquivos do GTFS...")
@@ -137,7 +139,7 @@ shapes["shape_id"] = shapes["shape_id"].astype(str)
 
 # 3. Filtragem do corredor Av. Antônio Carlos
 # Principais linhas troncais consideradas no modelo.
-linhas_corredor = ["51", "52", "63", "64", "67"]
+linhas_corredor = LINHAS_CORREDOR
 
 routes_filtradas = routes[
     routes["route_short_name"].isin(linhas_corredor)
@@ -165,17 +167,52 @@ print(
 )
 print(f"Quantidade de route_id identificados: {len(route_ids)}")
 
-# Viagens associadas às linhas selecionadas.
+# Serviços de dia útil (segunda a sexta, sem sábado/domingo).
+# Exclui fins de semana e as tabelas especiais de Carnaval.
+calendar = pd.read_csv(gtfs_folder / "calendar.txt", dtype={"service_id": str})
+dias_uteis = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+servicos_dia_util = calendar.loc[
+    (calendar[dias_uteis].sum(axis=1) == 5)
+    & (calendar["saturday"] == 0)
+    & (calendar["sunday"] == 0),
+    "service_id",
+].tolist()
+print(f"Serviços de dia útil considerados: {servicos_dia_util}")
+
+# Viagens de dia útil associadas às linhas selecionadas.
 trips_filtradas = trips[
     trips["route_id"].isin(route_ids)
+    & trips["service_id"].astype(str).isin(servicos_dia_util)
 ].copy()
 
 if trips_filtradas.empty:
-    print("Nenhuma viagem encontrada para as linhas selecionadas.")
+    print("Nenhuma viagem de dia útil encontrada para as linhas selecionadas.")
     sys.exit(1)
 
+# Variantes de itinerário: todas as variantes regulares de dia útil entram
+# (Direta Manhã/Tarde, retornos na Av. Dom Pedro II, Madrugão etc.), pois
+# fazem parte da operação real. Carnaval já foi excluído pelo calendário.
+# Variantes listadas em VARIANTES_EXCLUIDAS (config.py) são removidas.
+if VARIANTES_EXCLUIDAS:
+    padrao = "|".join(VARIANTES_EXCLUIDAS)
+    excluir = trips_filtradas["trip_headsign"].str.contains(
+        padrao, case=False, na=False
+    )
+    print(f"Viagens removidas por VARIANTES_EXCLUIDAS: {int(excluir.sum())}")
+    trips_filtradas = trips_filtradas[~excluir].copy()
 
-# 4. Cálculo da Extensão das Linhas (D_l)
+trips_filtradas = trips_filtradas.merge(
+    routes_filtradas[["route_id", "route_short_name"]], on="route_id"
+)
+print("\nViagens de dia útil por linha e variante:")
+print(
+    trips_filtradas.groupby(["route_short_name", "trip_headsign"])
+    .size()
+    .to_string()
+)
+
+
+# 4. Cálculo da Extensão das Viagens (D_l, ida + volta)
 print("\nCalculando extensão geométrica das linhas (km)...")
 
 # Ordenação dos pontos de cada geometria.
@@ -230,22 +267,12 @@ if trips_com_extensao.empty:
     )
     sys.exit(1)
 
-# Extensão média por route_id.
-extensao_media_por_linha = (
-    trips_com_extensao.groupby("route_id")["extensao_km"]
-    .mean()
-    .reset_index()
-)
-
-extensao_media_por_linha = extensao_media_por_linha.merge(
-    routes_filtradas[["route_id", "route_short_name"]],
-    on="route_id",
-    how="left",
-)
+# A extensão fica por viagem; a média por (linha, faixa) é feita no passo 5,
+# ponderada pelo número de viagens de cada variante naquela faixa.
 
 
-# 5. Cálculo do Tempo de Ciclo e de Custo
-print("\nCalculando tempos de ciclo e custos operacionais...")
+# 5. Cálculo do Tempo de Ciclo (n_lt)
+print("\nCalculando tempos de ciclo...")
 
 # Associação dos horários às viagens selecionadas.
 st_trips = stop_times.merge(
@@ -310,42 +337,40 @@ tempo_viagem = tempo_viagem[
     tempo_viagem["duracao_viagem_min"] >= 0
 ].copy()
 
-# Faixa horária da primeira partida.
+# Faixa horária da primeira partida, na hora do relógio (0-23).
+# O GTFS usa horários após 24:00 para viagens que passam da meia-noite
+# (ex.: 25:10 = 01:10); o módulo 24 junta essas viagens à faixa correta.
 tempo_viagem["faixa_horaria"] = (
-    tempo_viagem["horario_inicio"] // 60
+    (tempo_viagem["horario_inicio"] // 60) % 24
 ).astype(int)
 
-# ATENÇÃO:
-# Essa parte considera ida + volta e 15% de margem para o terminal.
-# Essa é uma hipótese de modelagem, não um ciclo medido
-# diretamente pelo GTFS.
-ciclo_por_faixa = (
-    tempo_viagem.groupby(["route_id", "faixa_horaria"])[
-        "duracao_viagem_min"
-    ]
-    .mean()
-    .reset_index()
-)
-
-ciclo_por_faixa["tempo_ciclo_horas"] = (
-    ciclo_por_faixa["duracao_viagem_min"] * 2 * 1.15 / 60.0
-).round(2)
-
-# Associação com as extensões médias.
-parametros_linhas = ciclo_por_faixa.merge(
-    extensao_media_por_linha[
-        ["route_id", "route_short_name", "extensao_km"]
-    ],
-    on="route_id",
+# Junta duração e extensão de cada viagem.
+tempo_viagem = tempo_viagem.merge(
+    trips_com_extensao[["trip_id", "route_short_name", "extensao_km"]],
+    on="trip_id",
     how="inner",
 )
 
-# Custo operacional estimado.
-custo_por_km = 11.00  # R$/km
+# Médias por (linha, faixa), ponderadas pelas viagens de cada variante
+# (ex.: no pico da linha 51 entram as viagens Direta, mais curtas).
+# Tempo de ciclo: as viagens do GTFS da BHTRANS são circulares (saem e
+# voltam à mesma estação), logo a duração já é o ciclo ida + volta.
+# Soma-se apenas a margem de regulação no terminal (MARGEM_TERMINAL).
+parametros_linhas = (
+    tempo_viagem.groupby(["route_short_name", "faixa_horaria"])
+    .agg(
+        duracao_viagem_min=("duracao_viagem_min", "mean"),
+        extensao_km=("extensao_km", "mean"),
+        viagens_gtfs=("trip_id", "count"),
+    )
+    .reset_index()
+)
 
-parametros_linhas["c_lt"] = (
-    parametros_linhas["extensao_km"] * custo_por_km
+parametros_linhas["tempo_ciclo_horas"] = (
+    parametros_linhas["duracao_viagem_min"] * MARGEM_TERMINAL / 60.0
 ).round(2)
+parametros_linhas["extensao_km"] = parametros_linhas["extensao_km"].round(3)
+# O custo por viagem (c_lt) é calculado em cria_instancia_teste.py.
 
 
 # 6. Resultados e Exportação dos Parâmetros
@@ -356,7 +381,7 @@ colunas_saida = [
     "faixa_horaria",
     "extensao_km",
     "tempo_ciclo_horas",
-    "c_lt",
+    "viagens_gtfs",
 ]
 
 print(
