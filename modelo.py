@@ -66,13 +66,13 @@ def _pesos_frota(pares, n):
     return por_faixa
 
 
-def resolver_modelo(df, frota_max, alpha_1, alpha_2, nome="Modelo", log=False):
+def construir_modelo(df, frota_max, alpha_1, alpha_2, nome="Modelo", log=False):
     """
-    Resolve o modelo para a instância `df` (uma linha por par linha x faixa).
+    Monta (sem resolver) o PLIM para a instância `df`.
 
-    Retorna um dicionário com status, valor objetivo, custo operacional,
-    passageiros represados, frota usada por faixa e o DataFrame `detalhe`
-    por (linha, faixa). Sem solução ótima, retorna apenas {"status": ...}.
+    `frota_max` pode ser um número (mesmo limite em todas as faixas) ou um
+    dicionário {faixa: limite}. Retorna um dicionário com o modelo gurobipy,
+    as variáveis, as restrições R1 (por faixa) e R2 (por par) e os parâmetros.
     """
     faltando = [c for c in COLUNAS_OBRIGATORIAS if c not in df.columns]
     if faltando:
@@ -107,18 +107,44 @@ def resolver_modelo(df, frota_max, alpha_1, alpha_2, nome="Modelo", log=False):
     deficit = gp.quicksum(w[p] for p in pares)
     model.setObjective(alpha_1 * custo_operacional + alpha_2 * deficit, GRB.MINIMIZE)
 
+    limite = frota_max if isinstance(frota_max, dict) else {t: frota_max for t in pesos}
+
     # R1: frota máxima simultânea por faixa horária (frota acumulada)
+    r1 = {}
     for t, termos in pesos.items():
         if termos:
-            model.addConstr(
-                gp.quicksum(peso * f[p] for p, peso in termos) <= frota_max,
+            r1[t] = model.addConstr(
+                gp.quicksum(peso * f[p] for p, peso in termos) <= limite[t],
                 name=f"Limite_Frota_t{t}",
             )
 
     # R2: atendimento da demanda (carga no trecho crítico) + déficit
+    r2 = {}
     for p in pares:
         l, t = p
-        model.addConstr(C[p] * f[p] + w[p] >= d[p], name=f"Atendimento_l{l}_t{t}")
+        r2[p] = model.addConstr(
+            C[p] * f[p] + w[p] >= d[p], name=f"Atendimento_l{l}_t{t}"
+        )
+
+    return {
+        "model": model, "f": f, "w": w, "r1": r1, "r2": r2,
+        "pares": pares, "pesos": pesos, "c": c, "n": n, "C": C, "d": d,
+        "custo_operacional": custo_operacional, "deficit": deficit,
+    }
+
+
+def resolver_modelo(df, frota_max, alpha_1, alpha_2, nome="Modelo", log=False):
+    """
+    Resolve o modelo para a instância `df` (uma linha por par linha x faixa).
+
+    Retorna um dicionário com status, valor objetivo, custo operacional,
+    passageiros represados, frota usada por faixa e o DataFrame `detalhe`
+    por (linha, faixa). Sem solução ótima, retorna apenas {"status": ...}.
+    """
+    m = construir_modelo(df, frota_max, alpha_1, alpha_2, nome, log)
+    model, f, w = m["model"], m["f"], m["w"]
+    pares, pesos, c, n, C, d = (m[k] for k in ("pares", "pesos", "c", "n", "C", "d"))
+    custo_operacional, deficit = m["custo_operacional"], m["deficit"]
 
     model.optimize()
 

@@ -1,6 +1,6 @@
 cenario,frota_max,custo_operacional_R$,passageiros_represados,pct_nao_atendida,valor_obj_Z
-Cenario_R_Relatorio,90,232609.6,853.0,0.9,253934.6
-Cenario_0_Baseline,90,260431.34,7243.0,7.7,441506.34
-Cenario_1_Frota_Mista_MOVE,90,264023.16,3693.0,3.9,356348.16
-Cenario_2_100pct_Articulados,90,262297.99,933.0,1.0,285622.99
-Cenario_3_Expansao_Frota_110,110,278928.6,2693.0,2.9,346253.6
+Cenario_R_Relatorio,90,273159.44,8052.0,7.1,474459.44
+Cenario_0_Baseline,90,297250.92,18569.0,16.3,761475.92
+Cenario_1_Frota_Mista_MOVE,90,306153.14,14097.0,12.4,658578.14
+Cenario_2_100pct_Articulados,90,310407.85,8052.0,7.1,511707.85
+Cenario_3_Expansao_Frota_110,110,326631.37,11604.0,10.2,616731.37

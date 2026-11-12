@@ -6,12 +6,16 @@ from config import (
     CAP_ARTICULADO,
     CUSTO_KM_MEDIO,
     D_L_RELATORIO,
+    DEMANDA_PBH_LIMITE,
     DEMANDA_PICO_LINHA,
     F_MAX,
     F_MIN,
+    FATOR_TRECHO_CRITICO,
     FATORES_DEMANDA,
+    FONTE_DEMANDA,
     LINHAS_CORREDOR,
     OPERAR_FORA_DO_HORARIO_GTFS,
+    PERFIL_HORARIO,
     USAR_EXTENSAO_GTFS,
 )
 
@@ -24,7 +28,10 @@ df_gtfs["route_short_name"] = df_gtfs["route_short_name"].astype(str).str.strip(
 
 # Validação: toda linha do corredor precisa ter dados no GTFS e demanda.
 sem_gtfs = sorted(set(LINHAS_CORREDOR) - set(df_gtfs["route_short_name"]))
-sem_demanda = sorted(set(LINHAS_CORREDOR) - set(DEMANDA_PICO_LINHA))
+sem_demanda = (
+    sorted(set(LINHAS_CORREDOR) - set(DEMANDA_PICO_LINHA))
+    if FONTE_DEMANDA == "hipotese" else []
+)
 faixas_sem_fator = sorted(set(range(24)) - set(FATORES_DEMANDA))
 if sem_gtfs or sem_demanda or faixas_sem_fator:
     print("ERRO na montagem da instância:")
@@ -77,11 +84,41 @@ else:
 # C_l: veículo articulado padronizado em todas as linhas (relatório).
 df["capacidade_C"] = CAP_ARTICULADO
 
-# 4. Demanda d_lt (HIPÓTESE definida em config.py, não extraída de dados)
-df["d_lt"] = (
-    df["route_short_name"].map(DEMANDA_PICO_LINHA)
-    * df["faixa_horaria"].map(FATORES_DEMANDA)
-).astype(int)
+# 4. Demanda d_lt (passageiros/hora no trecho crítico)
+if FONTE_DEMANDA == "hipotese":
+    # Versão anterior: pico hipotético por linha x perfil horário típico.
+    df["d_lt"] = (
+        df["route_short_name"].map(DEMANDA_PICO_LINHA)
+        * df["faixa_horaria"].map(FATORES_DEMANDA)
+    ).astype(int)
+elif FONTE_DEMANDA == "pbh":
+    # Demanda diária real (BHTRANS, dia útil) distribuída pelas 24 horas.
+    try:
+        dem = pd.read_csv("dados_pbh/demanda_diaria_linhas.csv", dtype={"linha": str})
+    except FileNotFoundError:
+        print("ERRO: rode antes 'python demanda_pbh.py' (gera dados_pbh/demanda_diaria_linhas.csv).")
+        sys.exit(1)
+    coluna = f"demanda_dia_util_{DEMANDA_PBH_LIMITE}"
+    diaria = dem.set_index("linha")[coluna]
+    faltam = sorted(set(LINHAS_CORREDOR) - set(diaria.index))
+    if faltam:
+        print(f"ERRO: linhas sem demanda em demanda_diaria_linhas.csv: {faltam}")
+        sys.exit(1)
+
+    if PERFIL_HORARIO == "gtfs":
+        # Proporcional às viagens programadas em cada hora (dia útil).
+        peso = df["viagens_gtfs"].fillna(0)
+    elif PERFIL_HORARIO == "tipico":
+        peso = df["faixa_horaria"].map(FATORES_DEMANDA)
+    else:
+        raise ValueError(f"PERFIL_HORARIO inválido: {PERFIL_HORARIO}")
+    participacao = peso / peso.groupby(df["route_short_name"]).transform("sum")
+
+    df["d_lt"] = (
+        df["route_short_name"].map(diaria) * participacao * FATOR_TRECHO_CRITICO
+    ).round().astype(int)
+else:
+    raise ValueError(f"FONTE_DEMANDA inválida: {FONTE_DEMANDA}")
 
 # 5. Limites de frequência
 # Faixas com viagem no GTFS: mínimo contratual F_MIN.

@@ -52,7 +52,29 @@ OPERAR_FORA_DO_HORARIO_GTFS = True
 # 51 no pico, com viagens Direta mais curtas). Congestionamento por horário
 # não é capturado pela grade programada.
 
-# ---------- Demanda (HIPÓTESE - não extraída de dados da BHTRANS) ----------
+# ---------- Demanda ----------
+# Fonte da demanda diária por linha:
+# "pbh": passageiros registrados por dia útil (relatórios mensais da BHTRANS,
+#        extraídos por demanda_pbh.py -> dados_pbh/demanda_diaria_linhas.csv);
+# "hipotese": DEMANDA_PICO_LINHA x FATORES_DEMANDA abaixo (versão anterior).
+FONTE_DEMANDA = "pbh"
+
+# Os embarques nas estações do MOVE não são registrados na linha troncal, e
+# sim na catraca da estação; demanda_pbh.py os rateia entre as linhas e gera
+# dois limites: "superior" (só linhas do modelo) ou "inferior" (todas as
+# linhas que a BHTRANS lista no corredor).
+DEMANDA_PBH_LIMITE = "superior"
+
+# Distribuição da demanda diária pelas 24 horas (só para FONTE_DEMANDA="pbh"):
+# "gtfs": proporcional às viagens programadas em cada hora (dia útil);
+# "tipico": proporcional a FATORES_DEMANDA (perfil típico de corredor).
+PERFIL_HORARIO = "gtfs"
+
+# Fração dos embarques que passa pelo trecho crítico (carga máxima). 1,0 é
+# conservador: supõe que todo passageiro ocupa o veículo no trecho crítico.
+FATOR_TRECHO_CRITICO = 1.0
+
+# ---------- Demanda hipotética (FONTE_DEMANDA = "hipotese") ----------
 # d_lt = carga no trecho crítico: passageiros/hora no ponto de maior
 # lotação da linha (não é o total de embarques). É isso que precisa caber
 # em C_l · f_lt na restrição R2 (Ceder, 2016).
