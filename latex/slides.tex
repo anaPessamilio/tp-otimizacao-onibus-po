@@ -2,7 +2,7 @@
 % Slides do Seminário 2 (12 min + 5 min de arguição)
 % Compilar no Overleaf com pdfLaTeX (arquivo principal: slides.tex)
 % Números e tabelas vêm de tabelas/*.tex (gerados pelo código).
-% Slides após "Obrigado" são de apoio para a arguição.
+% 11 slides principais; os slides de apoio (após "Obrigado") são para a arguição.
 % =====================================================================
 \documentclass[aspectratio=169,11pt]{beamer}
 
@@ -53,7 +53,7 @@
 \column{0.55\textwidth}
 \begin{itemize}
 \item 5 linhas troncais do MOVE (51, 52, 63, 64, 67), dia útil, 24 faixas
-\item \destaque{Decisões:} quantas partidas por hora, e com qual \destaque{tipo de veículo} (articulado ou Padron)
+\item \destaque{Decisões:} partidas por hora e \destaque{tipo de veículo} (articulado ou Padron)
 \item \destaque{Objetivo:} custo da operação $\times$ espera dos passageiros
 \end{itemize}
 \column{0.42\textwidth}
@@ -62,7 +62,7 @@
 \begin{itemize}
 \item Frota compartilhada, ocupada pelo ciclo inteiro
 \item Corredor com limite de partidas/h
-\item Fila: quem não embarca espera a próxima hora
+\item Fila: quem não embarca espera a hora seguinte
 \end{itemize}
 \end{block}
 \end{columns}
@@ -79,7 +79,7 @@
 \text{(R4)}\ & f^{\min}_{lt} \le \textstyle\sum_k f_{ltk} \le f^{\max}_{lt} && \text{padrão de serviço}
 \end{align*}
 \begin{itemize}
-\item $f_{ltk}$ inteiro; $w_{lt}$: passageiros esperando ao fim da faixa ($\sum w$ = passageiro-hora)
+\item $f_{ltk}$ inteiro; $d_{lt}$: embarques/h; $w_{lt}$: passageiros esperando ao fim da faixa
 \item \nVarInt{} inteiras, \nVarCont{} contínuas, \nRestr{} restrições
 \end{itemize}
 \end{frame}
@@ -90,31 +90,35 @@
 \includegraphics[width=0.85\textwidth]{omega_ilustracao.pdf}
 \begin{itemize}\small
 \item $\omega(k,n)$: fração da faixa $s+k$ em que um ônibus que partiu em $s$ ainda está rodando
-\item $\sum_k \omega(k,n) = n$ $\Rightarrow$ frota = frequência $\times$ ciclo (Ceder, 2016) quando a frequência é constante
+\item $\sum_k \omega(k,n) = n$ $\Rightarrow$ frota = frequência $\times$ ciclo (Ceder, 2016) com frequência constante
 \item Captura o \destaque{início do pico}: os ônibus das 6h ainda ocupam a frota às 7h
 \end{itemize}
 \end{frame}
 
 % ---------------------------------------------------------------- 5
-\begin{frame}{Dados: o que é medido e o que é hipótese}
-\scriptsize
-\resizebox{\linewidth}{!}{\input{tabelas/parametros_fontes.tex}}
+\begin{frame}{Dados e calibração da demanda}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Oferta (GTFS da BHTRANS)}
+\begin{itemize}\small
+\item Ciclos e extensões por linha e hora
+\item $F=\frotaMax$: frota que a grade atual exige (cadastro MOVE: \frotaMOVE{}, todos os corredores, com reserva)
+\item $\bar P=\capCorredor$ partidas/h: pico programado hoje
+\end{itemize}
+\column{0.48\textwidth}
+\textbf{Demanda (relatórios BHTRANS)}
+\begin{itemize}\small
+\item Embarques por dia útil; nas estações, a catraca não identifica a linha
+\item Rateio $\Rightarrow$ intervalo de \demandaInf{} a \demandaSup{} emb./dia ($\lambda$ de 0 a 1)
+\item \destaque{Calibração:} $\lambda=\lambdaCentral$ $\Rightarrow$ grade atual com ocupação média de 100\%
+\item Por linha, a grade satura entre $\lambda=\lambdaMinLinha$ e \lambdaMaxLinha{}: efeito do rateio
+\end{itemize}
+\end{columns}
+\vspace{0.3em}
+\small Custos, capacidades, padrão de serviço e $\alpha_2$: \destaque{hipóteses} declaradas (tabela no apoio).
 \end{frame}
 
 % ---------------------------------------------------------------- 6
-\begin{frame}{Demanda real: BHTRANS + incerteza do rateio}
-\begin{itemize}\small
-\item Passageiros por dia útil (mar--ago/2026). Embarques nas \destaque{estações} (\embarquesEstacoes/dia) não são registrados na linha
-\item Rateio entre as linhas $\Rightarrow$ intervalo: \demandaInf{} (inferior) a \demandaSup{} (superior) pas/dia
-\item Instância parametrizada por $\lambda\in[0,1]$; cenário central $\lambda=\lambdaCentral$
-\item Limite superior: \embViagemUm{} embarques por viagem atual $>$ 130 lugares $\Rightarrow$ superestima a carga
-\end{itemize}
-\vspace{0.3em}
-\centering\scriptsize
-\resizebox{\linewidth}{!}{\input{tabelas/demanda_bhtrans.tex}}
-\end{frame}
-
-% ---------------------------------------------------------------- 7
 \begin{frame}{Solução: Gurobi, branch-and-cut}
 \begin{columns}[T]
 \column{0.5\textwidth}
@@ -133,64 +137,43 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \end{columns}
 \end{frame}
 
-% ---------------------------------------------------------------- 8
-\begin{frame}{Validação: solução ótima $\times$ grade atual (GTFS)}
-\begin{columns}[c]
-\column{0.56\textwidth}
-\includegraphics[width=\textwidth]{validacao_partidas.pdf}
-\column{0.42\textwidth}
-\scriptsize
-\resizebox{\linewidth}{!}{\input{tabelas/validacao_linhas.tex}}
-\vspace{0.4em}
-
-\small
-\begin{itemize}
-\item Mesma frota (\frotaMax) e mesmo limite do corredor
-\item \destaque{Redistribui}: menos 52 e 63, mais 51, 64 e 67
-\item +\variacaoViagens\% viagens, fora do pico
+% ---------------------------------------------------------------- 7
+\begin{frame}{Validação: grade atual $\times$ ótimo, no mesmo modo}
+\centering
+\resizebox{0.95\linewidth}{!}{\input{tabelas/validacao_comparacao.tex}}
+\vspace{0.6em}
+\begin{itemize}\small
+\item Ótimo: \destaque{mais serviço por mais custo} (+\variacaoCusto\% de custo, +\variacaoViagens\% de viagens)
+\item Total por linha $\approx \sum_t\lceil d/C\rceil$: segue a \destaque{regra de rateio}, não é validação independente
+\item O ganho do modelo está na \destaque{distribuição horária} e no acoplamento pela frota
 \end{itemize}
-\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 8
+\begin{frame}{Resultados dependem da demanda ($\lambda$)}
+\centering
+\includegraphics[width=0.88\textwidth]{demanda_lambda.pdf}
+\begin{itemize}\small
+\item $\lambda=\lambdaCentral$: espera de \esperaMin{} min/pas; frota no limite só às \horaPrecoMax
+\item Escassez de frota (preço-sombra $>0$) a partir de $\lambda\approx\lambdaGargalo$; no limite inferior, a frota sobra
+\item $\lambda=1$: +10 articulados reduzem a espera de \esperaBaseUm{} para \esperaMaisDezArtUm{} min/pas; corredor +20\%, só para \esperaCorredorUm
+\end{itemize}
 \end{frame}
 
 % ---------------------------------------------------------------- 9
-\begin{frame}{Cenário central: o gargalo é o início do pico da manhã}
-\begin{columns}[c]
-\column{0.6\textwidth}
-\includegraphics[width=\textwidth]{frota_deficit_por_hora.pdf}
-\column{0.38\textwidth}
-\small
-\begin{itemize}
-\item Custo: R\$~\custoTotal/dia
-\item Espera: \destaque{\pctNaoAtendidos\%} (\naoAtendidos{} pas$\cdot$h)
-\item Frota no limite às \horaPrecoMax
-\item Fila se forma às 6h--7h
-\end{itemize}
-\end{columns}
-\end{frame}
-
-% ---------------------------------------------------------------- 10
-\begin{frame}{Resultados dependem da demanda ($\lambda$)}
-\centering
-\includegraphics[width=0.9\textwidth]{demanda_lambda.pdf}
-\begin{itemize}\small
-\item Limite inferior: frota sobra (\frotaNecZero{} necessários), preço-sombra zero
-\item Limite superior: \frotaNecUm{} necessários, espera de \pctLambdaUm\%
-\end{itemize}
-\end{frame}
-
-% ---------------------------------------------------------------- 11
 \begin{frame}{Cenários: o modelo escolhe o tipo de veículo}
-\includegraphics[width=0.62\textwidth]{cenarios.pdf}\hfill
-\begin{minipage}[b]{0.35\textwidth}\small
+\includegraphics[width=0.58\textwidth]{cenarios.pdf}\hfill
+\begin{minipage}[b]{0.39\textwidth}\small
 \begin{itemize}
-\item 90 articulados: espera sobe para \pctFnoventa\%
-\item \destaque{+15 Padron}: espera \pctPadron\% \emph{e} custo menor (Padron fora das 6h--7h)
-\item Corredor +20\% ou padrão relaxado: sem efeito $\Rightarrow$ gargalo é a frota
+\item 90 articulados: espera sobe para \esperaFnoventa{} min/pas
+\item +15 Padron: \esperaPadron{} min/pas e custo operacional menor
+\item \destaque{Mas}: sem aquisição e tripulação, e com R\$/km hipotético. Com custo/km igual ao articulado, compensa até R\$~\equilibrioPadronIgual/veíc.$\cdot$dia
+\item +10 articulados (mesma capacidade): até R\$~\equilibrioMaisDezArt/veíc.$\cdot$dia
 \end{itemize}
 \end{minipage}
 \end{frame}
 
-% ---------------------------------------------------------------- 12
+% ---------------------------------------------------------------- 10
 \begin{frame}{Fronteira de Pareto e o peso $\alpha_2$}
 \begin{columns}[c]
 \column{0.58\textwidth}
@@ -199,42 +182,30 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \small
 \begin{itemize}
 \item $\varepsilon$-restrição: min custo s.a. espera $\le \varepsilon$
-\item Perto do melhor serviço: R\$~\custoMarginalPareto{} por passageiro-hora evitado
-\item $\alpha_2=\alfaDois$ $>$ esse custo $\Rightarrow$ solução \destaque{praticamente lexicográfica}
-\item A fronteira mostra o trade-off que a soma ponderada esconde
+\item Perto do melhor serviço, reduzir 1 passageiro-hora custa cerca de R\$~\custoMarginalPareto
+\item Para $\alpha_2$ acima de $\sim$R\$~\custoMarginalPareto, o ganho é marginal $\Rightarrow$ solução \destaque{quase lexicográfica}
+\item A fronteira mostra as alternativas
 \end{itemize}
 \end{columns}
 \end{frame}
 
-% ---------------------------------------------------------------- 13
-\begin{frame}{Dualidade: quanto vale um ônibus a mais?}
-\centering\scriptsize
-\resizebox{\linewidth}{!}{\input{tabelas/duais_frota.tex}}
-\vspace{0.6em}
-\begin{itemize}\small
-\item Relaxação linear (simplex): preço-sombra só $>0$ onde a restrição está ativa (\destaque{folgas complementares})
-\item Frota às \horaPrecoMax: R\$~\precoSombraMax{} no PL; R\$~\deltaPLIMMax{} re-otimizando o PLIM
-\item Duais de R2: $=c/C$ (\regimeFolga), $>c/C$ (\regimeLimite), $<c/C$ (\regimeSobra), fila (\regimeFila)
-\end{itemize}
-\end{frame}
-
-% ---------------------------------------------------------------- 14
+% ---------------------------------------------------------------- 11
 \begin{frame}{Limitações e conclusões}
 \begin{columns}[T]
 \column{0.48\textwidth}
 \textbf{Limitações}
 \begin{itemize}\small
-\item Demanda = embarques, não carga no trecho crítico
-\item Rateio e perfil horário seguem a grade atual (testado com perfil típico)
-\item Sem linhas alimentadoras e transferências
+\item Demanda = embarques rateados, não carga medida
+\item Diferença entre linhas vem do rateio
+\item Padron sem custo fixo; custos/km hipotéticos
 \end{itemize}
 \column{0.48\textwidth}
 \textbf{Conclusões}
 \begin{itemize}\small
 \item PLIM exato em $<1$\,s com frota acumulada, fila, corredor e tipos de veículo
-\item Ótimo redistribui as linhas com a mesma frota
-\item Gargalo: frota às \horaPrecoMax
-\item Padron complementar: menos custo e menos espera
+\item Demanda calibrada: mais serviço por +\variacaoCusto\% de custo
+\item Escassez de frota no pico da manhã só para $\lambda\gtrsim\lambdaGargalo$
+\item Frota extra: articulado rende mais por veículo, salvo se o Padron for bem mais barato
 \end{itemize}
 \end{columns}
 \vspace{1em}
@@ -244,25 +215,48 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 % ================================================================ apoio
 \appendix
 
-\begin{frame}{Apoio: respostas a perguntas prováveis}
-\scriptsize
-\begin{itemize}
-\item \textbf{De onde vem $F=\frotaMax$?} Frota em operação exigida pela grade atual do GTFS, calculada com R1.
-\item \textbf{A demanda não é a grade reescalada?} Em parte (rateio e perfil seguem a grade). Teste com perfil típico independente: conclusões se mantêm.
-\item \textbf{Por que mais viagens que a grade atual?} No cenário central, cada viagem atual recebe \embViagemCentral{} embarques ($>130$); o ótimo usa a frota ociosa fora do pico.
-\item \textbf{Nó raiz = problema fácil?} \cortesGomory{}+\cortesMIR{} cortes fecharam um gap de \gapInt\%; a relaxação não é inteira.
-\item \textbf{Por que $\alpha_2=\alfaDois$?} Acima do custo marginal do extremo da fronteira; o efeito é lexicográfico, e a fronteira mostra as alternativas.
-\item \textbf{Os não atendidos somem?} Não: esperam a próxima hora (R2 com fila). O modo ``perda'' dá conclusões semelhantes.
-\item \textbf{Por que duais só da relaxação?} PLIM não tem duais; validamos re-otimizando o PLIM com +1 unidade.
+\begin{frame}{Apoio: dualidade -- quanto vale um ônibus a mais?}
+\centering\scriptsize
+\resizebox{0.9\linewidth}{!}{\input{tabelas/duais_frota.tex}}
+\vspace{0.5em}
+\begin{itemize}\small
+\item Relaxação linear: preço-sombra só $>0$ onde a restrição está ativa (folgas complementares)
+\item +1 veículo sai da faixa de validade do RHS $\Rightarrow$ ganho no PLIM menor que o dual
+\item \faixasReotimizadas{} faixas re-otimizadas no PLIM; ganho em \faixasGanhoPLIM
+\item Duais de R2 (\nPares{} pares): $=c/C$ (\regimeFolga), $>c/C$ (\regimeLimite), $<c/C$ (\regimeSobra), fila (\regimeFila), sem demanda (\regimeSemDemanda)
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Apoio: robustez e sensibilidade}
+\begin{frame}{Apoio: frota e espera por hora (demanda calibrada)}
+\centering
+\includegraphics[height=0.8\textheight]{frota_deficit_por_hora.pdf}
+\end{frame}
+
+\begin{frame}{Apoio: parâmetros e origem}
+\centering
+\resizebox{\linewidth}{!}{\input{tabelas/parametros_fontes.tex}}
+\end{frame}
+
+\begin{frame}{Apoio: respostas a perguntas prováveis}
+\scriptsize
+\begin{itemize}
+\item \textbf{Viagens saem da 52 e 63 por quê?} Efeito do rateio: a grade dessas linhas só satura em $\lambda\approx\lambdaMaxLinha$; a da 64, em $\lambda\approx\lambdaMinLinha$.
+\item \textbf{Por que este $\lambda$?} Calibrado: a grade que opera hoje teria ocupação média de 100\%.
+\item \textbf{Quanto custa a grade atual?} R\$~\custoGTFS/dia, contra R\$~\custoTotal{} do ótimo, que atende mais.
+\item \textbf{Padron sem custo de aquisição?} Sim; por isso o custo de equilíbrio por veículo$\cdot$dia e a sensibilidade ao R\$/km.
+\item \textbf{Embarque $\times$ carga?} Os dados são embarques; o fator de trecho crítico (= 1) não é identificável separado de $\lambda$.
+\item \textbf{Frota necessária não cresce sempre com $\lambda$?} Quando o corredor passa a limitar, parte da espera fica inevitável.
+\item \textbf{Por que R\$~\alfaDois/pas$\cdot$h?} Hipótese; acima de $\sim$R\$~\custoMarginalPareto{} o resultado muda pouco (fronteira).
+\item \textbf{$w_{l,-1}=0$, mas frota cíclica?} Deliberado: o dia útil começa sem fila; os ônibus da madrugada são poucos.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Apoio: demanda ($\lambda$) e robustez}
 \centering\scriptsize
-\resizebox{\linewidth}{!}{\input{tabelas/robustez.tex}}
+\resizebox{\linewidth}{!}{\input{tabelas/demanda_lambda.tex}}
 \vspace{0.8em}
 
-\resizebox{\linewidth}{!}{\input{tabelas/demanda_lambda.tex}}
+\resizebox{0.8\linewidth}{!}{\input{tabelas/robustez.tex}}
 \end{frame}
 
 \end{document}

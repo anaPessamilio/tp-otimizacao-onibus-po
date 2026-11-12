@@ -1,13 +1,25 @@
-\begin{tabular}{lrrrrr}
+\begin{tabular}{rlrrrrr}
 \toprule
-Cenário & Viagens & Padron & Custo (R\$) & Não atend. & \% \\
+$\lambda$ & Cenário & Viagens & Padron & Custo (R\$) & Espera (min/pas) & Equilíbrio (R\$/veíc.$\cdot$dia) \\
 \midrule
-Base: 97 articulados (grade atual) & 728 & 0 & 270.643 & 1.515 & 1{,}69 \\
-Frota de 90 articulados (proposta inicial) & 728 & 0 & 270.899 & 3.382 & 3{,}78 \\
-+10 articulados (107) & 729 & 0 & 271.031 & 873 & 0{,}98 \\
-+15 Padron (97 art. + 15 Padron) & 733 & 96 & 264.163 & 834 & 0{,}93 \\
-Troca de 20 art. por 30 Padron (77 + 30) & 748 & 138 & 266.045 & 2.010 & 2{,}25 \\
-Corredor +20\% (77 partidas/h) & 728 & 0 & 270.617 & 1.515 & 1{,}69 \\
-Padrão de serviço relaxado (f_min = 1) & 728 & 0 & 270.642 & 1.515 & 1{,}69 \\
+0{,}435 & Base: 97 articulados & 712 & 0 & 264.417 & 0{,}32 &  \\
+0{,}435 & 90 articulados (proposta inicial) & 711 & 0 & 264.172 & 1{,}59 &  \\
+0{,}435 & +10 articulados (107) & 714 & 0 & 265.095 & 0{,}16 & 510 \\
+0{,}435 & +15 Padron (R\$ 9,50/km) & 717 & 107 & 256.980 & 0{,}16 & 899 \\
+0{,}435 & +15 Padron (R\$ 11,00/km) & 714 & 97 & 260.999 & 0{,}16 & 611 \\
+0{,}435 & +15 Padron (R\$ 12,50/km) & 714 & 9 & 265.095 & 0{,}16 & 340 \\
+0{,}435 & Troca: 77 art. + 30 Padron$^\dagger$ & 732 & 145 & 259.321 & 0{,}77 &  \\
+0{,}435 & Corredor +20\% (77/h) & 712 & 0 & 264.417 & 0{,}32 &  \\
+0{,}435 & Padrão de serviço relaxado & 710 & 0 & 263.809 & 0{,}32 &  \\
+\midrule
+1{,}000 & Base: 97 articulados & 907 & 0 & 337.615 & 8{,}36 &  \\
+1{,}000 & 90 articulados (proposta inicial)$^\dagger$ & 899 & 0 & 335.606 & 13{,}65 &  \\
+1{,}000 & +10 articulados (107) & 909 & 0 & 337.355 & 6{,}89 & 6.991 \\
+1{,}000 & +15 Padron (R\$ 9,50/km) & 917 & 92 & 332.630 & 6{,}88 & 4.986 \\
+1{,}000 & +15 Padron (R\$ 11,00/km) & 916 & 88 & 337.132 & 6{,}88 & 4.691 \\
+1{,}000 & +15 Padron (R\$ 12,50/km) & 915 & 30 & 341.087 & 6{,}89 & 4.412 \\
+1{,}000 & Troca: 77 art. + 30 Padron$^\dagger$ & 950 & 186 & 338.154 & 9{,}99 &  \\
+1{,}000 & Corredor +20\% (77/h) & 907 & 0 & 337.933 & 8{,}23 &  \\
+1{,}000 & Padrão de serviço relaxado & 906 & 0 & 337.645 & 8{,}25 &  \\
 \bottomrule
 \end{tabular}

@@ -1,121 +1,121 @@
 linha,faixa_horaria,demanda,dual_R2,c_por_lugar,regime
-51,0,416,2.427,2.427,= c/C: frota com folga
-51,1,277,2.427,2.427,= c/C: frota com folga
-51,2,416,2.427,2.427,= c/C: frota com folga
-51,3,277,2.427,2.427,= c/C: frota com folga
-51,4,694,2.452,2.452,= c/C: frota com folga
-51,5,1388,5.232,2.345,> c/C: frota ou corredor no limite
-51,6,2498,40.826,2.304,> c/C: frota ou corredor no limite
-51,7,2775,27.278,2.305,> c/C: frota ou corredor no limite
-51,8,2220,2.318,2.318,= c/C: frota com folga
-51,9,1387,2.419,2.419,= c/C: frota com folga
-51,10,1249,2.396,2.396,= c/C: frota com folga
-51,11,1249,2.396,2.396,= c/C: frota com folga
-51,12,1526,2.406,2.406,= c/C: frota com folga
-51,13,1249,2.396,2.396,= c/C: frota com folga
-51,14,1249,2.396,2.396,= c/C: frota com folga
-51,15,1526,2.376,2.376,= c/C: frota com folga
-51,16,1943,2.356,2.356,= c/C: frota com folga
-51,17,2359,2.343,2.343,= c/C: frota com folga
-51,18,1943,2.356,2.356,= c/C: frota com folga
-51,19,1249,2.396,2.396,= c/C: frota com folga
-51,20,832,2.452,2.452,= c/C: frota com folga
-51,21,555,2.452,2.452,= c/C: frota com folga
-51,22,416,2.452,2.452,= c/C: frota com folga
-51,23,277,2.452,2.452,= c/C: frota com folga
+51,0,402,2.427,2.427,= c/C: frota com folga
+51,1,268,2.427,2.427,= c/C: frota com folga
+51,2,402,2.427,2.427,= c/C: frota com folga
+51,3,268,2.427,2.427,= c/C: frota com folga
+51,4,670,2.452,2.452,= c/C: frota com folga
+51,5,1340,5.032,2.345,> c/C: frota ou corredor no limite
+51,6,2413,38.037,2.304,> c/C: frota ou corredor no limite
+51,7,2681,25.545,2.305,> c/C: frota ou corredor no limite
+51,8,2144,2.318,2.318,= c/C: frota com folga
+51,9,1340,2.419,2.419,= c/C: frota com folga
+51,10,1206,2.396,2.396,= c/C: frota com folga
+51,11,1206,2.396,2.396,= c/C: frota com folga
+51,12,1474,2.406,2.406,= c/C: frota com folga
+51,13,1206,2.396,2.396,= c/C: frota com folga
+51,14,1206,2.396,2.396,= c/C: frota com folga
+51,15,1474,2.376,2.376,= c/C: frota com folga
+51,16,1876,2.356,2.356,= c/C: frota com folga
+51,17,2279,2.343,2.343,= c/C: frota com folga
+51,18,1876,2.356,2.356,= c/C: frota com folga
+51,19,1206,2.396,2.396,= c/C: frota com folga
+51,20,804,2.452,2.452,= c/C: frota com folga
+51,21,536,2.452,2.452,= c/C: frota com folga
+51,22,402,2.452,2.452,= c/C: frota com folga
+51,23,268,2.452,2.452,= c/C: frota com folga
 52,0,0,0.0,1.76,sem demanda
 52,1,0,0.0,1.76,sem demanda
 52,2,0,0.0,1.76,sem demanda
 52,3,0,0.0,1.76,sem demanda
 52,4,0,0.0,1.76,sem demanda
-52,5,566,1.762,1.76,> c/C: frota ou corredor no limite
-52,6,1245,27.354,1.76,> c/C: frota ou corredor no limite
-52,7,1245,26.733,1.76,fila: passageiros esperando
-52,8,566,1.733,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,9,340,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,10,340,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,11,453,1.76,1.76,= c/C: frota com folga
-52,12,453,1.76,1.76,= c/C: frota com folga
-52,13,340,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,14,340,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,15,453,1.76,1.76,= c/C: frota com folga
-52,16,1132,1.76,1.76,= c/C: frota com folga
-52,17,906,1.76,1.76,= c/C: frota com folga
-52,18,1132,1.76,1.76,= c/C: frota com folga
-52,19,340,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,20,340,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,21,340,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
-52,22,339,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,5,542,1.762,1.76,> c/C: frota ou corredor no limite
+52,6,1193,25.462,1.76,> c/C: frota ou corredor no limite
+52,7,1193,25.0,1.76,fila: passageiros esperando
+52,8,542,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,9,326,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,10,326,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,11,434,1.76,1.76,= c/C: frota com folga
+52,12,434,1.76,1.76,= c/C: frota com folga
+52,13,325,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,14,325,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,15,434,1.76,1.76,= c/C: frota com folga
+52,16,1085,1.76,1.76,= c/C: frota com folga
+52,17,868,1.76,1.76,= c/C: frota com folga
+52,18,1085,1.76,1.76,= c/C: frota com folga
+52,19,326,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,20,325,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,21,326,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
+52,22,326,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
 52,23,0,0.0,1.76,sem demanda
-63,0,113,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
-63,1,113,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
-63,2,113,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
-63,3,113,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
-63,4,340,3.17,3.17,= c/C: frota com folga
-63,5,793,14.124,2.913,> c/C: frota ou corredor no limite
-63,6,1019,50.264,2.913,> c/C: frota ou corredor no limite
-63,7,1133,27.886,2.913,fila: passageiros esperando
-63,8,680,2.886,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,9,340,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,10,340,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,11,453,2.913,2.913,= c/C: frota com folga
-63,12,453,2.913,2.913,= c/C: frota com folga
-63,13,340,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,14,340,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,15,679,2.913,2.913,= c/C: frota com folga
-63,16,679,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,17,793,2.913,2.913,= c/C: frota com folga
-63,18,906,2.913,2.913,= c/C: frota com folga
-63,19,453,2.913,2.913,= c/C: frota com folga
-63,20,340,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,21,340,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,22,340,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
-63,23,340,2.913,2.913,= c/C: frota com folga
+63,0,108,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
+63,1,108,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
+63,2,108,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
+63,3,108,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
+63,4,326,3.17,3.17,= c/C: frota com folga
+63,5,760,13.346,2.913,> c/C: frota ou corredor no limite
+63,6,977,46.863,2.913,> c/C: frota ou corredor no limite
+63,7,1085,26.153,2.913,fila: passageiros esperando
+63,8,651,1.153,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,9,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,10,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,11,434,2.913,2.913,= c/C: frota com folga
+63,12,434,2.913,2.913,= c/C: frota com folga
+63,13,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,14,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,15,651,2.913,2.913,= c/C: frota com folga
+63,16,651,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,17,760,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,18,868,2.913,2.913,= c/C: frota com folga
+63,19,434,2.913,2.913,= c/C: frota com folga
+63,20,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,21,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,22,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
+63,23,325,2.913,2.913,= c/C: frota com folga
 64,0,0,0.0,3.779,sem demanda
 64,1,0,0.0,3.779,sem demanda
 64,2,0,0.0,3.779,sem demanda
 64,3,0,0.0,3.779,sem demanda
-64,4,452,7.55,4.131,> c/C: frota ou corredor no limite
-64,5,1205,35.182,3.706,> c/C: frota ou corredor no limite
-64,6,1959,53.546,3.476,fila: passageiros esperando
-64,7,1808,28.546,3.573,> c/C: frota ou corredor no limite
-64,8,1055,3.906,3.906,= c/C: frota com folga
-64,9,904,3.906,3.906,= c/C: frota com folga
-64,10,904,3.906,3.906,= c/C: frota com folga
-64,11,904,3.906,3.906,= c/C: frota com folga
-64,12,904,3.906,3.906,= c/C: frota com folga
-64,13,904,3.906,3.906,= c/C: frota com folga
-64,14,1205,3.906,3.906,= c/C: frota com folga
-64,15,1658,3.543,3.543,= c/C: frota com folga
-64,16,1356,3.64,3.64,= c/C: frota com folga
-64,17,1205,3.906,3.906,= c/C: frota com folga
-64,18,1055,3.906,3.906,= c/C: frota com folga
-64,19,603,3.906,3.906,= c/C: frota com folga
-64,20,603,3.906,3.906,= c/C: frota com folga
-64,21,452,3.906,3.906,= c/C: frota com folga
-64,22,603,3.906,3.906,= c/C: frota com folga
-64,23,301,3.906,3.906,= c/C: frota com folga
+64,4,438,7.313,4.131,> c/C: frota ou corredor no limite
+64,5,1167,32.998,3.706,> c/C: frota ou corredor no limite
+64,6,1897,49.956,3.476,> c/C: frota ou corredor no limite
+64,7,1751,26.813,3.573,> c/C: frota ou corredor no limite
+64,8,1021,3.906,3.906,= c/C: frota com folga
+64,9,876,3.906,3.906,= c/C: frota com folga
+64,10,876,3.906,3.906,= c/C: frota com folga
+64,11,876,3.906,3.906,= c/C: frota com folga
+64,12,876,3.906,3.906,= c/C: frota com folga
+64,13,876,3.906,3.906,= c/C: frota com folga
+64,14,1167,3.906,3.906,= c/C: frota com folga
+64,15,1605,3.543,3.543,= c/C: frota com folga
+64,16,1313,3.64,3.64,= c/C: frota com folga
+64,17,1167,3.906,3.906,= c/C: frota com folga
+64,18,1022,3.906,3.906,= c/C: frota com folga
+64,19,584,3.906,3.906,= c/C: frota com folga
+64,20,584,3.906,3.906,= c/C: frota com folga
+64,21,438,3.906,3.906,= c/C: frota com folga
+64,22,584,3.906,3.906,= c/C: frota com folga
+64,23,292,3.906,3.906,= c/C: frota com folga
 67,0,0,0.0,3.297,sem demanda
 67,1,0,0.0,3.297,sem demanda
 67,2,0,0.0,3.297,sem demanda
 67,3,0,0.0,3.297,sem demanda
 67,4,0,0.0,3.297,sem demanda
-67,5,1455,22.16,3.258,> c/C: frota ou corredor no limite
-67,6,1891,52.208,3.137,> c/C: frota ou corredor no limite
-67,7,1600,28.183,3.21,fila: passageiros esperando
-67,8,1455,3.183,3.183,= c/C: frota com folga
-67,9,582,3.483,3.483,= c/C: frota com folga
-67,10,582,3.483,3.483,= c/C: frota com folga
-67,11,582,3.483,3.483,= c/C: frota com folga
-67,12,582,3.483,3.483,= c/C: frota com folga
-67,13,727,3.483,3.483,= c/C: frota com folga
-67,14,582,3.483,3.483,= c/C: frota com folga
-67,15,1309,3.15,3.15,= c/C: frota com folga
-67,16,1455,3.183,3.183,= c/C: frota com folga
-67,17,1164,3.202,3.202,= c/C: frota com folga
-67,18,873,3.358,3.358,= c/C: frota com folga
-67,19,437,3.483,3.483,= c/C: frota com folga
-67,20,437,3.483,3.483,= c/C: frota com folga
-67,21,436,3.483,3.483,= c/C: frota com folga
-67,22,436,3.483,3.483,= c/C: frota com folga
-67,23,437,3.483,3.483,= c/C: frota com folga
+67,5,1408,20.848,3.258,> c/C: frota ou corredor no limite
+67,6,1830,48.687,3.137,> c/C: frota ou corredor no limite
+67,7,1548,26.45,3.21,> c/C: frota ou corredor no limite
+67,8,1408,3.183,3.183,= c/C: frota com folga
+67,9,563,3.483,3.483,= c/C: frota com folga
+67,10,563,3.483,3.483,= c/C: frota com folga
+67,11,563,3.483,3.483,= c/C: frota com folga
+67,12,563,3.483,3.483,= c/C: frota com folga
+67,13,704,3.483,3.483,= c/C: frota com folga
+67,14,563,3.483,3.483,= c/C: frota com folga
+67,15,1267,3.15,3.15,= c/C: frota com folga
+67,16,1408,3.183,3.183,= c/C: frota com folga
+67,17,1126,3.202,3.202,= c/C: frota com folga
+67,18,844,3.358,3.358,= c/C: frota com folga
+67,19,422,3.483,3.483,= c/C: frota com folga
+67,20,422,3.483,3.483,= c/C: frota com folga
+67,21,422,3.483,3.483,= c/C: frota com folga
+67,22,422,3.483,3.483,= c/C: frota com folga
+67,23,422,3.483,3.483,= c/C: frota com folga

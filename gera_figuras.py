@@ -9,13 +9,17 @@ analise_sensibilidade_alpha.py, analise_pareto.py, analise_demanda.py.
 from pathlib import Path
 
 import matplotlib
+import matplotlib.ticker
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
 import config  # noqa: E402
+from cria_instancia_teste import lambda_efetivo  # noqa: E402
 from modelo import frota_grade_atual  # noqa: E402
+
+LAMBDA_C = lambda_efetivo()
 
 SAIDA = Path("latex/figuras")
 SAIDA.mkdir(parents=True, exist_ok=True)
@@ -50,7 +54,20 @@ def eixo_horas(ax):
     ax.set_xlabel("Faixa horária")
 
 
+def virgula(v, _=None):
+    """Rótulo numérico com vírgula decimal (padrão brasileiro)."""
+    if abs(v - round(v)) < 1e-9 and abs(v) >= 1:
+        return milhar(v)
+    return f"{v:g}".replace(".", ",")
+
+
 def salvar(fig, nome):
+    for ax in fig.get_axes():
+        for eixo in (ax.xaxis, ax.yaxis):
+            if eixo.get_scale() == "linear" and not isinstance(
+                    eixo.get_major_formatter(), matplotlib.ticker.FuncFormatter) \
+                    and not isinstance(eixo.get_major_formatter(), matplotlib.ticker.FixedFormatter):
+                eixo.set_major_formatter(matplotlib.ticker.FuncFormatter(virgula))
     fig.savefig(SAIDA / f"{nome}.pdf")
     fig.savefig(SAIDA / f"{nome}.png", dpi=180)
     plt.close(fig)
@@ -124,22 +141,22 @@ salvar(fig, "validacao_partidas")
 
 # ------------------------------------------------------------------ 4. fronteira de Pareto
 par = pd.read_csv("fronteira_pareto.csv")
-eps = par[par["metodo"] == "epsilon-restricao"].sort_values("pct_nao_atendida")
+eps = par[par["metodo"] == "epsilon-restricao"].sort_values("espera_media_min")
 pond = par[par["metodo"] != "epsilon-restricao"]
-pond = pond[pond["pct_nao_atendida"] <= eps["pct_nao_atendida"].max() * 1.05]
+pond = pond[pond["espera_media_min"] <= eps["espera_media_min"].max() * 1.05]
 fig, ax = plt.subplots(figsize=(6.3, 3.2))
-ax.plot(eps["pct_nao_atendida"], eps["custo_operacional_R$"] / 1000, color=AZUL, linewidth=2,
+ax.plot(eps["espera_media_min"], eps["custo_operacional_R$"] / 1000, color=AZUL, linewidth=2,
         marker="o", markersize=4, label="Fronteira (ε-restrição)")
-ax.scatter(pond["pct_nao_atendida"], pond["custo_operacional_R$"] / 1000, s=42,
+ax.scatter(pond["espera_media_min"], pond["custo_operacional_R$"] / 1000, s=42,
            facecolor="white", edgecolor=LARANJA, linewidth=1.8, zorder=3,
            label="Soma ponderada (α₂ variando)")
 esc = pond[pond["alpha_2"] == config.ALPHA_2]
 if not esc.empty:
-    x, y = esc["pct_nao_atendida"].iloc[0], esc["custo_operacional_R$"].iloc[0] / 1000
+    x, y = esc["espera_media_min"].iloc[0], esc["custo_operacional_R$"].iloc[0] / 1000
     ax.annotate(f"α₂ = {config.ALPHA_2:g} (adotado)", (x, y), xytext=(25, -18),
                 textcoords="offset points", fontsize=8, color=TEXTO_2,
                 arrowprops={"arrowstyle": "-", "color": REF, "lw": 0.8})
-ax.set_xlabel("Não atendidos (passageiro-hora, % da demanda diária)")
+ax.set_xlabel("Espera excedente média (min por passageiro)")
 ax.set_ylabel("Custo operacional (R$ mil/dia)")
 ax.set_title("Fronteira de Pareto: custo x nível de serviço")
 ax.legend(loc="upper right")
@@ -148,8 +165,8 @@ salvar(fig, "fronteira_pareto")
 # ------------------------------------------------------------------ 5. resultados por nível de demanda
 lam = pd.read_csv("analise_demanda_lambda.csv")
 fig, (a1, a2, a3) = plt.subplots(1, 3, figsize=(6.6, 2.6), gridspec_kw={"wspace": 0.5})
-a1.plot(lam["lambda"], lam["pct_otimo"], color=AZUL, linewidth=2, marker="o", markersize=4)
-a1.set_title("Não atendidos (%)")
+a1.plot(lam["lambda"], lam["espera_min_otimo"], color=AZUL, linewidth=2, marker="o", markersize=4)
+a1.set_title("Espera média (min/pas)")
 a2.plot(lam["lambda"], lam["frota_necessaria"], color=AZUL, linewidth=2, marker="o", markersize=4)
 a2.axhline(F, color=REF, linestyle=(0, (4, 3)), linewidth=1.1)
 a2.text(0, F + 0.8, f"F = {F}", color=TEXTO_2, fontsize=7.5)
@@ -159,7 +176,7 @@ a3.plot(lam["lambda"], lam["maior_preco_sombra_frota"] / 1000, color=AZUL, linew
 a3.set_title("Preço-sombra máx. (R$ mil)")
 for ax in (a1, a2, a3):
     ax.set_xlabel("λ (0 = inferior, 1 = superior)")
-    ax.axvline(config.LAMBDA_DEMANDA, color=REF, linestyle=":", linewidth=1)
+    ax.axvline(LAMBDA_C, color=REF, linestyle=":", linewidth=1)
 salvar(fig, "demanda_lambda")
 
 # ------------------------------------------------------------------ 6. ilustração de ω
@@ -194,14 +211,15 @@ a2.set_title(f"ω(k, n)   (soma = {sum(pesos_ex):.2f} = n)".replace(".", ","))
 salvar(fig, "omega_ilustracao")
 
 # ------------------------------------------------------------------ 7. cenários
-cen = pd.read_csv("comparativo_resumo_cenarios.csv").iloc[::-1]
+cen = pd.read_csv("comparativo_resumo_cenarios.csv")
+cen = cen[cen["lambda"] == cen["lambda"].min()].iloc[::-1]  # λ calibrado
 rot = cen["cenario"].str.replace(" (", "\n(", regex=False)
 fig, (a1, a2) = plt.subplots(1, 2, figsize=(6.6, 3.6), sharey=True, gridspec_kw={"wspace": 0.1})
-a1.barh(rot, cen["pct_nao_atendida"], height=0.6, color=AZUL, edgecolor="white")
-a1.set_title("Não atendidos (% da demanda)")
-for y, v in enumerate(cen["pct_nao_atendida"]):
-    a1.text(v + 0.05, y, f"{v:.2f}%".replace(".", ","), va="center", fontsize=7.5, color=TEXTO_2)
-a1.set_xlim(0, cen["pct_nao_atendida"].max() * 1.35)
+a1.barh(rot, cen["espera_media_min"], height=0.6, color=AZUL, edgecolor="white")
+a1.set_title("Espera média (min/passageiro)")
+for y, v in enumerate(cen["espera_media_min"]):
+    a1.text(v + 0.02, y, f"{v:.2f}".replace(".", ","), va="center", fontsize=7.5, color=TEXTO_2)
+a1.set_xlim(0, cen["espera_media_min"].max() * 1.35)
 a2.barh(rot, cen["custo_operacional_R$"] / 1000, height=0.6, color=AZUL, edgecolor="white")
 a2.set_title("Custo operacional (R$ mil/dia)")
 for y, v in enumerate(cen["custo_operacional_R$"] / 1000):

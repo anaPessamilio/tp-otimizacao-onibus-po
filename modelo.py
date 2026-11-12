@@ -133,6 +133,7 @@ def construir_modelo(df, alpha_1, alpha_2, tipos=None, cap_corredor="config",
 
     model = gp.Model(nome)
     model.Params.OutputFlag = 1 if log else 0
+    model.Params.TimeLimit = config.TEMPO_LIMITE_S
 
     idx = [(l, t, k) for (l, t) in pares for k in K]
     f = model.addVars(
@@ -193,6 +194,20 @@ def construir_modelo(df, alpha_1, alpha_2, tipos=None, cap_corredor="config",
     }
 
 
+def indicadores(deficit, demanda, modo):
+    """
+    Indicadores de nível de serviço com unidade coerente:
+    - modo "espera": Σw é passageiro-hora; espera média excedente por
+      passageiro = 60 Σw / Σd (minutos);
+    - modo "perda": Σw é número de passageiros; % da demanda perdida.
+    """
+    return {
+        "modo": modo,
+        "espera_media_min": 60 * deficit / demanda if modo == "espera" else None,
+        "pct_perdidos": 100 * deficit / demanda if modo == "perda" else None,
+    }
+
+
 def _extrair(m, df):
     """Monta o dicionário de resultados a partir de um modelo resolvido."""
     f, w, K, pares, pesos = m["f"], m["w"], m["K"], m["pares"], m["pesos"]
@@ -227,7 +242,9 @@ def _extrair(m, df):
         linhas_det.append(reg)
     detalhe = pd.DataFrame(linhas_det)
     model = m["model"]
+    deficit, demanda = m["deficit"].getValue(), sum(d.values())
     return {
+        **indicadores(deficit, demanda, m["modo"]),
         "status": model.Status,
         "valor_obj_Z": model.ObjVal,
         "limitante": model.ObjBound,
@@ -245,6 +262,11 @@ def _extrair(m, df):
     }
 
 
+def tem_solucao(model):
+    """Ótimo provado, ou tempo limite atingido com solução viável (gap reportado)."""
+    return model.Status == GRB.OPTIMAL or (model.Status == GRB.TIME_LIMIT and model.SolCount > 0)
+
+
 def resolver_modelo(df, alpha_1=None, alpha_2=None, nome="Modelo", log=False,
                     arquivo_log=None, **kwargs):
     """Constrói e resolve o PLIM. Retorna {"status": ...} se não for ótimo."""
@@ -254,9 +276,10 @@ def resolver_modelo(df, alpha_1=None, alpha_2=None, nome="Modelo", log=False,
     if arquivo_log:
         m["model"].Params.LogFile = arquivo_log
     m["model"].optimize()
-    if m["model"].Status != GRB.OPTIMAL:
+    if not tem_solucao(m["model"]):
         return {"status": m["model"].Status}
     res = _extrair(m, df)
+    res["otimo_provado"] = m["model"].Status == GRB.OPTIMAL
     res["modelo"] = m
     return res
 
@@ -301,6 +324,7 @@ def avaliar_grade(df, coluna_freq="viagens_gtfs", tipo="articulado", alpha_1=Non
     frota = frota_em_operacao(df, coluna_freq)
     custo, deficit = det["custo_operacional_R$"].sum(), det["passageiros_represados"].sum()
     return {
+        **indicadores(deficit, det["demanda"].sum(), modo),
         "valor_obj_Z": alpha_1 * custo + alpha_2 * deficit,
         "custo_operacional": custo,
         "passageiros_represados": deficit,

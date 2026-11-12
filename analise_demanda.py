@@ -13,10 +13,10 @@ import pandas as pd
 from gurobipy import GRB
 
 import config
-from cria_instancia_teste import montar_instancia
+from cria_instancia_teste import lambda_efetivo, montar_instancia
 from modelo import avaliar_grade, construir_modelo, resolver_modelo
 
-LAMBDAS = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25]
+LAMBDAS = sorted({0.0, 0.25, lambda_efetivo(), 0.5, 0.75, 1.0, 1.25})
 
 
 def frota_necessaria(df):
@@ -70,13 +70,18 @@ for lam in LAMBDAS:
         "custo_gtfs": round(grade["custo_operacional"], 2),
         "nao_atendidos_otimo": round(res["passageiros_represados"], 0),
         "nao_atendidos_gtfs": round(grade["passageiros_represados"], 0),
-        "pct_otimo": round(100 * res["passageiros_represados"] / dem, 2),
-        "pct_gtfs": round(100 * grade["passageiros_represados"] / dem, 2),
+        "espera_min_otimo": round(res["espera_media_min"], 2),
+        "espera_min_gtfs": round(grade["espera_media_min"], 2),
         "Z_otimo": round(res["valor_obj_Z"], 2),
         "Z_gtfs": round(grade["valor_obj_Z"], 2),
         "frota_max_usada": round(res["frota_por_faixa"].max(), 1),
         "frota_necessaria": round(frota_nec, 1),
         "nao_atendidos_minimo_possivel": round(w_min, 0),
+        # faixas em que o corredor está no limite na solução ótima: quando o
+        # corredor passa a limitar, parte da espera é inevitável e a frota
+        # necessária para o "melhor atendimento possível" pode até cair
+        "faixas_corredor_no_limite": int((res["detalhe"].groupby("faixa_horaria")["frequencia_otima"].sum()
+                                          >= res["cap_corredor"]).sum()),
         "maior_preco_sombra_frota": round(preco, 2),
         "gap_integralidade_pct": round(100 * (res["valor_obj_Z"] - z_lp) / res["valor_obj_Z"], 2),
     })
@@ -100,7 +105,9 @@ for nome, kw_inst, kw_mod in casos:
         "viagens_otimo": int(res["detalhe"]["frequencia_otima"].sum()),
         "custo_otimo": round(res["custo_operacional"], 2),
         "nao_atendidos_otimo": round(res["passageiros_represados"], 0),
-        "pct_otimo": round(100 * res["passageiros_represados"] / res["demanda_total"], 2),
+        "indicador_otimo": round(res["espera_media_min"] if res["espera_media_min"] is not None
+                                 else res["pct_perdidos"], 2),
+        "unidade": "min/passageiro" if res["espera_media_min"] is not None else "% perdidos",
         "nao_atendidos_gtfs": round(grade["passageiros_represados"], 0),
         "frota_max_usada": round(res["frota_por_faixa"].max(), 1),
     })
@@ -109,6 +116,6 @@ df_rob.to_csv("analise_robustez.csv", index=False)
 
 print("=== RESULTADOS POR NÍVEL DE DEMANDA (λ) ===")
 print(df_lam.to_string(index=False))
-print(f"\n=== ROBUSTEZ (λ = {config.LAMBDA_DEMANDA}) ===")
+print(f"\n=== ROBUSTEZ (λ = {lambda_efetivo():.3f}) ===")
 print(df_rob.to_string(index=False))
 print("\nArquivos: 'analise_demanda_lambda.csv' e 'analise_robustez.csv'.")

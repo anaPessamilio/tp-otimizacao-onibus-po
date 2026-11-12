@@ -1,4 +1,4 @@
-caso,viagens_otimo,custo_otimo,nao_atendidos_otimo,pct_otimo,nao_atendidos_gtfs,frota_max_usada
-"Base (perfil GTFS, fila)",728,270642.75,1515.0,1.69,76743.0,97.0
-Perfil horário típico (independente da grade),745,276704.06,165.0,0.18,71707.0,95.5
-Não atendido desiste (modo perda),721,267710.91,940.0,1.05,6452.0,97.0
+caso,viagens_otimo,custo_otimo,nao_atendidos_otimo,indicador_otimo,unidade,nao_atendidos_gtfs,frota_max_usada
+"Base (perfil GTFS, fila)",712,264416.95,465.0,0.32,min/passageiro,50301.0,96.9
+Perfil horário típico (independente da grade),723,269099.23,151.0,0.1,min/passageiro,51490.0,91.4
+Não atendido desiste (modo perda),708,262993.98,392.0,0.45,% perdidos,4245.0,96.9

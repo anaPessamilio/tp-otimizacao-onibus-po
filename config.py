@@ -78,8 +78,11 @@ FONTE_DEMANDA = "pbh"
 # [BHTRANS + HIPÓTESE de rateio]: inferior (rateio com todas as linhas do
 # corredor) e superior (só linhas do modelo).
 # LAMBDA_DEMANDA posiciona a instância: demanda = inf + λ (sup - inf).
-# 0 = limite inferior, 1 = limite superior, 0,5 = cenário central.
-LAMBDA_DEMANDA = 0.5
+# 0 = limite inferior, 1 = limite superior, ou "calibrado": o λ em que a
+# capacidade total da grade atual (GTFS, articulados) iguala a demanda total,
+# isto é, ocupação média de 100% da grade que de fato opera [critério de
+# calibração]. Os resultados são sempre apresentados também para todo λ.
+LAMBDA_DEMANDA = "calibrado"
 
 # Distribuição da demanda diária pelas 24 horas:
 # "gtfs": proporcional às viagens programadas em cada hora (dia útil);
@@ -87,8 +90,10 @@ LAMBDA_DEMANDA = 0.5
 #           grade atual -- usado como teste de robustez).
 PERFIL_HORARIO = "gtfs"
 
-# Fração dos embarques que passa pelo trecho crítico (carga máxima). 1,0 é
-# conservador: todo passageiro ocupa o veículo no trecho crítico [HIPÓTESE].
+# Os dados são EMBARQUES, não carga medida no trecho crítico. Este fator
+# converte embarques em carga no trecho crítico; 1,0 supõe que todo
+# passageiro ocupa o veículo no trecho de maior lotação [HIPÓTESE]. Na
+# calibração por λ, o fator e λ não são identificáveis separadamente.
 FATOR_TRECHO_CRITICO = 1.0
 
 # ---------- Demanda hipotética / perfil típico ----------
@@ -99,6 +104,12 @@ FATORES_DEMANDA = {
     13: 0.45, 14: 0.45, 15: 0.55, 16: 0.75, 17: 0.95, 18: 0.90,
     19: 0.60, 20: 0.40, 21: 0.30, 22: 0.20, 23: 0.10,
 }
+
+# ---------- Solver ----------
+# Tempo limite (s) por resolução. A instância central resolve em < 1 s; o
+# limite só atua nas análises mais pesadas (ex.: cenários com λ = 1), em que a
+# solução é reportada com o gap de otimalidade alcançado.
+TEMPO_LIMITE_S = 60
 
 # ---------- Pesos da função objetivo ----------
 ALPHA_1 = 1.0  # peso do custo operacional (R$)

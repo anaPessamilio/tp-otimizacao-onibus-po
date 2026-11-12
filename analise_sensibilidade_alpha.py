@@ -23,7 +23,7 @@ for a2 in valores_alpha_2:
         "viagens_totais": int(res["detalhe"]["frequencia_otima"].sum()),
         "custo_operacional_R$": round(res["custo_operacional"], 2),
         "passageiros_represados": round(res["passageiros_represados"], 0),
-        "pct_demanda_nao_atendida": round(100 * res["passageiros_represados"] / res["demanda_total"], 2),
+        "espera_media_min": round(res["espera_media_min"], 2),
         "faixas_frota_saturada": faixas_frota_saturada(res),
         "valor_obj_Z": round(res["valor_obj_Z"], 2),
     })

@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from gurobipy import GRB
 
-from modelo import construir_modelo
+from modelo import construir_modelo, tem_solucao
 
 df = pd.read_csv("instancia_modelo_bhtrans.csv", dtype={"route_short_name": str})
 N_PONTOS = 14
@@ -34,7 +34,7 @@ def resolver(objetivo, eps=None, custo_teto=None):
     if eps is not None:
         model.addConstr(m["deficit"] <= eps, name="epsilon")
     model.optimize()
-    if model.Status != GRB.OPTIMAL:
+    if not tem_solucao(model):
         return None
     return {
         "custo_operacional_R$": m["custo_operacional"].getValue(),
@@ -52,7 +52,8 @@ ext_servico = resolver("custo", eps=w_min + 1e-6)
 ext_custo = resolver("custo")
 w_max = ext_custo["passageiros_represados"]
 
-# Faixa relevante: do mínimo possível até 30% da demanda (além disso as filas
+# Faixa relevante: do mínimo possível até 30% da demanda em passageiro-hora
+# (espera média de 18 min por passageiro; além disso as filas
 # acumuladas perdem sentido prático). Espaçamento geométrico para detalhar a
 # região de alto nível de serviço.
 w_teto = min(w_max, 0.30 * demanda)
@@ -64,19 +65,19 @@ for eps in np.geomspace(w_min, w_teto, N_PONTOS):
         pontos.append(r)
 
 fronteira = pd.DataFrame(pontos).drop_duplicates(subset=["custo_operacional_R$"])
-fronteira["pct_nao_atendida"] = 100 * fronteira["passageiros_represados"] / demanda
+fronteira["espera_media_min"] = 60 * fronteira["passageiros_represados"] / demanda
 fronteira["metodo"] = "epsilon-restricao"
 
 pond = pd.read_csv("sensibilidade_alpha2.csv")
-pond = pond.rename(columns={"pct_demanda_nao_atendida": "pct_nao_atendida",
+pond = pond.rename(columns={
                             "viagens_totais": "viagens"})
 pond["metodo"] = "soma ponderada (alpha_2 = " + pond["alpha_2"].astype(str) + ")"
 
 saida = pd.concat([
     fronteira[["metodo", "epsilon", "custo_operacional_R$", "passageiros_represados",
-               "pct_nao_atendida", "viagens"]],
+               "espera_media_min", "viagens"]],
     pond[["metodo", "alpha_2", "custo_operacional_R$", "passageiros_represados",
-          "pct_nao_atendida", "viagens"]],
+          "espera_media_min", "viagens"]],
 ], ignore_index=True)
 saida.to_csv("fronteira_pareto.csv", index=False)
 

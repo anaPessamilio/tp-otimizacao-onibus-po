@@ -1,0 +1,5 @@
+modo,solucao,viagens,custo_operacional_R$,nao_atendidos,espera_media_min,pct_perdidos,valor_obj_Z
+espera,Grade atual (GTFS),664,242902.32,50301.0,34.97,,1500427.32
+espera,Solução ótima,712,264416.95,465.0,0.32,,276041.95
+perda,Grade atual (GTFS),664,242902.32,4245.0,,4.92,349027.32
+perda,Solução ótima,708,262993.98,392.0,,0.45,272793.98

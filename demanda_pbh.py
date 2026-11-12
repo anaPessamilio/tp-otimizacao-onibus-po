@@ -199,8 +199,30 @@ def montar_demanda(tabela):
     return demanda, embarques_estacoes
 
 
+def extrair_frota(pdf_path):
+    """Frota cadastrada (seção "FROTA ACESSÍVEL POR CONSÓRCIO"): total do
+    sistema e frota do BRT MOVE (todos os corredores e consórcios)."""
+    with pdfplumber.open(pdf_path) as pdf:
+        for p in pdf.pages:
+            t = p.extract_text() or ""
+            if "FROTA ACESSÍVEL POR CONSÓRCIO" in t:
+                for linha in t.split("\n"):
+                    m = re.match(r"^TOTAL\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)", linha)
+                    if m:
+                        return {"frota_com_elevador": para_int(m.group(1)),
+                                "frota_brt_move": para_int(m.group(2)),
+                                "frota_total_sistema": para_int(m.group(3)),
+                                "arquivo": Path(pdf_path).name}
+    return None
+
+
 if __name__ == "__main__":
-    tabelas = [extrair_tabela(p) for p in obter_pdf()]
+    pdfs = obter_pdf()
+    frotas = [f for f in (extrair_frota(p) for p in pdfs) if f]
+    if frotas:
+        pd.DataFrame(frotas).to_csv(PASTA / "frota_bhtrans.csv", index=False)
+        print(f"Frota cadastrada (BHTRANS): {frotas[-1]}")
+    tabelas = [extrair_tabela(p) for p in pdfs]
     tabela = pd.concat(tabelas, ignore_index=True)
     tabela.to_csv(PASTA / "passageiros_corredor_antonio_carlos.csv", index=False)
 
