@@ -1,0 +1,5 @@
+# Dados brutos do GTFS (baixados automaticamente por extracao_dados_gtfs.py)
+gtfs_bhtrans/
+
+__pycache__/
+*.pyc
