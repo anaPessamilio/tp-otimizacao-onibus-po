@@ -3,8 +3,7 @@
 % Compilar no Overleaf com pdfLaTeX + BibTeX (arquivo principal: artigo.tex)
 %
 % Trechos em vermelho marcados com \afazer{...} devem ser escritos ou
-% revisados pelo grupo antes da entrega. Para conferir se sobrou algum,
-% procure por "afazer" no arquivo.
+% revisados pelo grupo antes da entrega (procure por "afazer").
 %
 % Números e tabelas vêm de tabelas/*.tex, gerados por gera_tabelas_latex.py
 % a partir dos resultados do código (não edite esses arquivos à mão).
@@ -19,6 +18,8 @@
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{array}
+\usepackage{verbatim}
 \usepackage{xcolor}
 \usepackage[font=small,labelfont=bf]{caption}
 \usepackage[round,authoryear]{natbib}
@@ -30,7 +31,7 @@
 \newcommand{\afazer}[1]{{\color{red}\textbf{[A FAZER:} #1\textbf{]}}}
 \newcommand{\R}{\mathbb{R}}
 
-\title{Otimização de Frequências das Linhas Troncais do MOVE\\no Corredor Antônio Carlos com Programação Linear Inteira Mista}
+\title{Otimização de Frequências e Tipos de Veículo das Linhas Troncais do MOVE\\no Corredor Antônio Carlos com Programação Linear Inteira Mista}
 \author{\afazer{Nome 1} \and \afazer{Nome 2} \and \afazer{Nome 3}\\[4pt]
 \small Pesquisa Operacional -- Departamento de Engenharia Elétrica -- UFMG}
 \date{Novembro de 2026}
@@ -39,19 +40,22 @@
 \maketitle
 
 \begin{abstract}
-Este trabalho define quantas viagens por hora cada linha troncal do MOVE no
-Corredor Antônio Carlos (Belo Horizonte) deve realizar ao longo de um dia útil.
-O problema é formulado como um Programa Linear Inteiro Misto (PLIM) bi-objetivo
-ponderado, que equilibra o custo operacional da concessionária e os passageiros
-não atendidos, sujeito a um limite de frota. A restrição de frota considera que
-um ônibus permanece em operação durante todo o seu tempo de ciclo, ocupando
-várias faixas horárias. A instância é construída com dados oficiais: tempos de
-viagem e extensões do GTFS da BHTRANS e passageiros registrados nos relatórios
-mensais da BHTRANS. O modelo é resolvido pelo Gurobi em menos de um segundo. Com
-frota de \frotaMax{} veículos e demanda no limite superior, a solução ótima deixa
-\pctNaoAtendidos\% da demanda sem atendimento, concentrada no início dos picos.
-A análise de dualidade identifica o veículo adicional das \horaPrecoMax{} como o
-de maior valor marginal (R\$~\precoSombraMax{}).
+Este trabalho define, para cada uma das cinco linhas troncais do MOVE no
+Corredor Antônio Carlos (Belo Horizonte), quantas viagens de cada tipo de
+veículo devem partir em cada hora de um dia útil. O problema é formulado como um
+Programa Linear Inteiro Misto (PLIM) que minimiza o custo operacional e a espera
+excedente dos passageiros, sujeito à frota disponível -- contabilizada ao longo
+de todo o ciclo de cada viagem --, à capacidade do corredor, a um padrão mínimo
+de serviço e a uma fila de passageiros entre faixas horárias. A instância usa
+dados oficiais: a oferta e a frota atuais vêm do GTFS da BHTRANS e a demanda,
+dos passageiros registrados nos relatórios mensais da BHTRANS. Como o rateio
+desses registros entre as linhas é incerto, os resultados são apresentados para
+toda a faixa de demanda compatível com os dados. Com a frota atual
+(\frotaMax{} ônibus), a espera excedente varia de \pctLambdaZero\% a
+\pctLambdaUm\% da demanda entre os limites inferior e superior; no cenário
+central, a solução ótima redistribui as viagens entre as linhas e reduz a espera
+em relação à grade atual. A fronteira de Pareto, os cenários de frota e a
+análise de dualidade mostram que o gargalo é a frota no pico da manhã.
 \end{abstract}
 
 % =====================================================================
@@ -61,32 +65,33 @@ de maior valor marginal (R\$~\precoSombraMax{}).
 O transporte coletivo por ônibus é o principal modo de deslocamento de grande
 parte da população de Belo Horizonte. O MOVE, sistema de BRT (\emph{Bus Rapid
 Transit}) da cidade, opera em corredores exclusivos, entre eles o da Av.~Antônio
-Carlos / Av.~Pedro~I, que liga a região de Venda Nova e da Pampulha ao centro.
-No corredor, as estações registram, em média, \embarquesEstacoes{} embarques por
-dia útil \citep{bhtrans2026}.
+Carlos / Av.~Pedro~I, que liga as regiões de Venda Nova e da Pampulha ao centro.
+Nas estações desse corredor são registrados, em média, \embarquesEstacoes{}
+embarques por dia útil \citep{bhtrans2026}.
 
 Definir a frequência de cada linha -- quantas viagens por hora ela realiza -- é
-uma das etapas centrais do planejamento operacional \citep{ceder2016}. Frequência
-baixa deixa passageiros nos pontos e provoca superlotação; frequência alta
-aumenta o custo da operação e exige mais veículos, um recurso limitado. A decisão
-envolve, portanto, um \emph{trade-off} entre o nível de serviço ao passageiro e o
-custo da concessionária, sob a restrição da frota disponível.
+uma das etapas centrais do planejamento operacional \citep{ceder2016}.
+Frequência baixa deixa passageiros nos pontos e provoca superlotação; frequência
+alta aumenta o custo e exige mais veículos, um recurso limitado e compartilhado
+entre linhas e horários. A decisão envolve, portanto, um \emph{trade-off} entre
+nível de serviço e custo, acoplado pela frota.
 
 \afazer{Revisar e completar: relevância do problema para BH, contexto do MOVE e
-motivação do grupo. Um ou dois parágrafos.}
+motivação do grupo.}
 
-Este artigo modela o problema como um PLIM bi-objetivo ponderado e o resolve com
-o Gurobi. Suas contribuições são: (i) uma restrição de frota acumulada, que
-contabiliza os ônibus que partiram em faixas anteriores e ainda estão em
-circulação; (ii) uma instância construída com dados abertos reais (GTFS e
-relatórios de passageiros da BHTRANS); e (iii) análises de sensibilidade e de
-dualidade que interpretam economicamente a solução.
+Este artigo formula o problema como um PLIM e o resolve de forma exata com o
+Gurobi. As contribuições são: (i) uma restrição de frota acumulada, que
+contabiliza os ônibus que partiram em faixas anteriores e ainda não retornaram;
+(ii) o tipo de veículo (articulado ou Padron) como variável de decisão; (iii) uma
+fila de passageiros entre faixas horárias; (iv) uma instância construída com
+dados abertos reais e validada contra a grade atual; e (v) a fronteira de Pareto
+custo $\times$ nível de serviço e uma análise de dualidade que interpretam a
+solução.
 
-O restante do artigo está organizado assim: a Seção~\ref{sec:revisao} revisa a
-literatura; a Seção~\ref{sec:modelo} descreve o problema, o modelo e os dados; a
-Seção~\ref{sec:algoritmo} descreve o método de solução; a
-Seção~\ref{sec:resultados} apresenta e discute os resultados; e a
-Seção~\ref{sec:conclusao} conclui.
+O artigo está organizado assim: a Seção~\ref{sec:revisao} revisa a literatura; a
+Seção~\ref{sec:modelo} descreve o problema, o modelo e os dados; a
+Seção~\ref{sec:algoritmo}, o método de solução; a Seção~\ref{sec:resultados}
+apresenta os resultados; e a Seção~\ref{sec:conclusao} conclui.
 
 % =====================================================================
 \section{Revisão da literatura}\label{sec:revisao}
@@ -95,14 +100,14 @@ Seção~\ref{sec:conclusao} conclui.
 \afazer{Esta seção é avaliada como pesquisa bibliográfica do grupo. O professor
 espera um parágrafo por referência, discutindo de forma crítica o modelo, a
 ferramenta de solução e os resultados de cada trabalho. Meta: 6 a 8 trabalhos.
-Os dois parágrafos abaixo são pontos de partida -- confiram as informações nas
-fontes originais e reescrevam com as palavras do grupo.}
+Os dois parágrafos abaixo são pontos de partida -- confiram nas fontes originais
+e reescrevam com as palavras do grupo.}
 
 \citet{ceder2016} sistematiza os métodos de definição de frequências usados na
 prática, baseados em dados de carregamento (passageiros no ponto de carga
 máxima) e em padrões de frequência mínima. Esses métodos dimensionam cada linha
 separadamente; a frota disponível não entra como restrição conjunta entre
-linhas, que é justamente o acoplamento tratado neste trabalho.
+linhas, que é o acoplamento tratado neste trabalho.
 \afazer{Conferir no livro e aprofundar.}
 
 \citet{arbex2015} tratam conjuntamente o projeto da rede e a definição de
@@ -110,14 +115,14 @@ frequências como um problema multiobjetivo, minimizando o custo dos passageiros
 e o custo do operador, e o resolvem com um algoritmo genético de objetivos
 alternados. A abordagem lida com um problema maior (inclui o traçado das
 linhas), mas, por ser heurística, não garante otimalidade; aqui, com as linhas
-fixas, o problema é linear e pode ser resolvido de forma exata.
+fixas, o problema é linear e é resolvido de forma exata.
 \afazer{Conferir no artigo: instâncias usadas, resultados obtidos.}
 
 \afazer{Acrescentar 4 a 6 trabalhos. Sugestões de busca (Google Scholar,
 Periódicos CAPES): ``frequency setting problem'', ``transit frequency
-optimization'', ``bus fleet size frequency'', ``line planning'' (ver
-\citet{schmidt2024}), revisões sobre planejamento de ônibus, e trabalhos
-brasileiros sobre BRT (MOVE, BRT Rio, Curitiba).}
+optimization'', ``mixed fleet'' / ``vehicle type frequency setting'', ``line
+planning'' (ver \citet{schmidt2024}), revisões sobre planejamento de ônibus e
+trabalhos brasileiros sobre BRT.}
 
 % =====================================================================
 \section{Descrição do problema e modelagem}\label{sec:modelo}
@@ -125,99 +130,124 @@ brasileiros sobre BRT (MOVE, BRT Rio, Curitiba).}
 
 \subsection{Problema}
 
-Considera-se o conjunto $L$ das cinco linhas troncais do MOVE no Corredor
-Antônio Carlos (51, 52, 63, 64 e 67) e um dia útil dividido em 24 faixas
-horárias, $T=\{0,1,\dots,23\}$. As linhas são circulares: cada viagem parte de
-uma estação de integração, percorre o corredor até o centro e retorna ao ponto de
-partida. Deseja-se decidir quantas viagens cada linha realiza em cada faixa,
-minimizando um compromisso entre o custo operacional e os passageiros não
-atendidos, sem exceder a frota disponível em nenhum momento do dia.
+Considera-se o conjunto $L$ das linhas troncais do MOVE no Corredor Antônio
+Carlos (51, 52, 63, 64 e 67), o conjunto $T=\{0,\dots,23\}$ das faixas horárias
+de um dia útil e o conjunto $K$ dos tipos de veículo (articulado e Padron). As
+linhas são circulares: cada viagem parte de uma estação de integração, percorre
+o corredor até o centro e retorna. Deseja-se decidir quantas viagens de cada
+tipo cada linha realiza em cada faixa, minimizando um compromisso entre o custo
+operacional e a espera excedente dos passageiros. As decisões estão acopladas:
+os ônibus de cada tipo são compartilhados entre as linhas e permanecem ocupados
+por mais de uma faixa; as linhas disputam a capacidade do corredor; e quem não
+embarca numa faixa continua esperando na seguinte.
 
 \subsection{Modelo matemático}
 
 \paragraph{Parâmetros.}
-$c_{lt}$ é o custo de uma viagem da linha $l$ na faixa $t$ (R\$), igual à
-extensão da viagem $D_{lt}$ (ida e volta) vezes o custo por quilômetro;
-$n_{lt}$ é o tempo de ciclo (h); $C_l$ é a capacidade do veículo
-(passageiros); $d_{lt}$ é a demanda (passageiros/h); $F$ é a frota máxima;
-$f^{\min}_{lt}$ e $f^{\max}_{lt}$ são os limites de frequência; e
-$\alpha_1,\alpha_2$ são os pesos da função objetivo.
+$c_{ltk}=D_{lt}\cdot\text{(custo/km)}_k$ é o custo de uma viagem; $D_{lt}$ é a
+extensão da viagem (ida e volta); $n_{lt}$ é o tempo de ciclo (h); $C_k$ é a
+capacidade e $F_k$ a frota disponível do tipo $k$; $d_{lt}$ é a demanda
+(passageiros/h no trecho crítico); $\bar{P}$ é a capacidade do corredor
+(partidas/h); $f^{\min}_{lt}$ e $f^{\max}_{lt}$ são limites de frequência; e
+$\alpha_1,\alpha_2$ são os pesos da função objetivo. A
+Tabela~\ref{tab:fontes} lista os valores e a origem de cada parâmetro.
 
 \paragraph{Variáveis.}
-$f_{lt}\in\mathbb{Z}_{\ge 0}$ é o número de viagens (partidas) da linha $l$ na
-faixa $t$; $w_{lt}\in\R_{\ge 0}$ é o número de passageiros não atendidos.
+$f_{ltk}\in\mathbb{Z}_{\ge 0}$ é o número de partidas do tipo $k$ da linha $l$ na
+faixa $t$; $w_{lt}\in\R_{\ge 0}$ é o número de passageiros que terminam a faixa
+$t$ ainda esperando.
 
 \paragraph{Formulação.}
 \begin{align}
-\min\; Z \;=\; & \alpha_1 \sum_{l\in L}\sum_{t\in T} c_{lt}\, f_{lt}
-               \;+\; \alpha_2 \sum_{l\in L}\sum_{t\in T} w_{lt} \label{eq:fo}\\
+\min\; Z = {} & \alpha_1 \sum_{l,t,k} c_{ltk}\, f_{ltk} \;+\; \alpha_2 \sum_{l,t} w_{lt} \label{eq:fo}\\
 \text{s.a.}\quad
-& \sum_{l\in L}\sum_{k\ge 0} \omega\!\left(k,\, n_{l,t-k}\right) f_{l,t-k} \;\le\; F
-  && \forall\, t\in T \label{eq:frota}\\
-& C_l\, f_{lt} + w_{lt} \;\ge\; d_{lt}
+& \sum_{l\in L}\sum_{s\in T} \omega\!\left(t-s,\, n_{ls}\right) f_{lsk} \;\le\; F_k
+  && \forall\, t\in T,\ k\in K \label{eq:frota}\\
+& \sum_{k\in K} C_k\, f_{ltk} + w_{lt} \;\ge\; d_{lt} + w_{l,t-1}
   && \forall\, l\in L,\ t\in T \label{eq:demanda}\\
-& f^{\min}_{lt} \le f_{lt} \le f^{\max}_{lt},\quad f_{lt}\in\mathbb{Z},\quad w_{lt}\ge 0
-  && \forall\, l\in L,\ t\in T \label{eq:dominio}
+& \sum_{l\in L}\sum_{k\in K} f_{ltk} \;\le\; \bar{P}
+  && \forall\, t\in T \label{eq:corredor}\\
+& f^{\min}_{lt} \;\le\; \sum_{k\in K} f_{ltk} \;\le\; f^{\max}_{lt}
+  && \forall\, l\in L,\ t\in T \label{eq:padrao}\\
+& f_{ltk}\in\mathbb{Z}_{\ge0},\quad w_{lt}\ge 0,\quad w_{l,-1}=0. \notag
 \end{align}
 
-A função objetivo~\eqref{eq:fo} pondera o custo operacional e a penalidade por
-passageiro não atendido. A restrição~\eqref{eq:demanda} garante que a capacidade
-ofertada, somada aos passageiros não atendidos, cubra a demanda; $w_{lt}$ atua
-como variável de folga com custo, o que mantém o modelo sempre viável. O índice
-$t-k$ é tomado módulo 24 (o dia é cíclico).
+A restrição~\eqref{eq:demanda} faz com que quem não embarca na faixa $t$ entre na
+demanda de $t+1$; assim, $\sum w_{lt}$ é a espera excedente em
+passageiro-hora, e $\alpha_2$ é o valor (R\$) atribuído a cada passageiro-hora.
+Como variante, o modo ``perda'' remove o termo $w_{l,t-1}$ (o passageiro não
+atendido desiste); ele é usado como teste de robustez.
+A restrição~\eqref{eq:corredor} limita as partidas por hora no corredor e
+\eqref{eq:padrao} impõe um intervalo máximo entre ônibus (padrão de serviço). Os
+índices de tempo em~\eqref{eq:frota} são cíclicos.
 
 \paragraph{Restrição de frota acumulada.}
-A restrição~\eqref{eq:frota} limita os veículos em operação em cada faixa. Um
-ônibus que parte num instante $u$ da faixa $s$, com $u$ uniforme em $[0,1)$,
-permanece em operação no intervalo $[u,\,u+n]$. A fração média da faixa $s+k$
+Um ônibus que parte num instante $u$ da faixa $s$, com $u$ uniforme em $[0,1)$,
+permanece em operação no intervalo $[u,\,u+n]$. A fração média da faixa $s+j$
 que ele ocupa é
 \begin{equation}
-\omega(k,n) \;=\; \int_0^1 \bigl|\,[u,\,u+n]\cap[k,\,k+1]\,\bigr|\; du .
+\omega(j,n) \;=\; \int_0^1 \bigl|\,[u,\,u+n]\cap[j,\,j+1]\,\bigr|\; du .
 \end{equation}
-Assim, a frota em operação na faixa $t$ soma as partidas de $t$ e as partidas de
-faixas anteriores que ainda não retornaram. Como $\sum_k \omega(k,n)=n$, para
-frequência constante a restrição se reduz à relação clássica
-$\text{frota} = \text{frequência}\times\text{tempo de ciclo}$ \citep{ceder2016};
-a diferença aparece nas transições de demanda, como o início dos picos. Os pesos
-$\omega$ são calculados previamente, e a restrição permanece linear em $f$.
+A frota em operação na faixa $t$ soma as partidas de $t$ e as de faixas
+anteriores que ainda não retornaram. Como $\sum_j \omega(j,n)=n$, para
+frequência constante~\eqref{eq:frota} se reduz à relação clássica
+$\text{frota}=\text{frequência}\times\text{ciclo}$ \citep{ceder2016}; a diferença
+aparece nas transições de demanda, como o início dos picos. Os pesos $\omega$ são
+calculados previamente, e a restrição permanece linear.
 
-A instância tem \nVarInt{} variáveis inteiras, \nVarInt{} contínuas e \nRestr{}
-restrições.
-
-\subsection{Dados e instância}
-
-\paragraph{Oferta (GTFS).}
-Tempos de viagem, extensões e calendário foram extraídos do GTFS da BHTRANS
-\citep{gtfsbhtrans}. Foram consideradas apenas as viagens de dia útil, de todas
-as variantes regulares de cada linha. A extensão de cada itinerário foi calculada
-a partir da sua geometria, projetada em SIRGAS~2000 / UTM~23S. Para cada linha e
-faixa, a extensão e o tempo de ciclo são médias ponderadas pelo número de viagens
-de cada variante; ao tempo de viagem acrescenta-se uma margem de regulação de
-\margemTerminal\% no terminal. O custo por quilômetro adotado é
-R\$~\custoKm{} (média entre ônibus Padron e articulado), e a capacidade é de
-130 passageiros (articulado).
+\paragraph{Estrutura e porte.}
+Sem as restrições~\eqref{eq:frota} e~\eqref{eq:corredor} e sem a fila, cada par
+$(l,t)$ seria independente e a solução trivial seria $f=\lceil d/C\rceil$. O
+problema é combinatório porque a frota acumulada acopla linhas e faixas
+vizinhas, o corredor acopla as linhas, a fila acopla as faixas e os tipos de
+veículo competem pela demanda. A instância tem \nVarInt{} variáveis inteiras,
+\nVarCont{} contínuas e \nRestr{} restrições.
 
 \begin{table}[htbp]
 \centering
-\caption{Parâmetros por linha extraídos do GTFS e demanda (limite superior).}
+\caption{Parâmetros, valores e origem (GTFS e BHTRANS: dados oficiais; hipótese: valor adotado pelo grupo).}
+\label{tab:fontes}
+\small
+\input{tabelas/parametros_fontes.tex}
+\end{table}
+
+\subsection{Dados e instância}
+
+\paragraph{Oferta e frota (GTFS).}
+Tempos de viagem, extensões e calendário foram extraídos do GTFS da BHTRANS
+\citep{gtfsbhtrans}, considerando as viagens de dia útil de todas as variantes
+regulares. A extensão foi calculada a partir da geometria de cada itinerário,
+projetada em SIRGAS~2000 / UTM~23S. Por linha e faixa, extensão e tempo de ciclo
+são médias ponderadas pelas viagens de cada variante, com margem de
+\margemTerminal\% no terminal. A frota disponível não é arbitrada: é a frota em
+operação exigida pela grade atual (\viagensGTFS{} viagens por dia), calculada com
+a mesma regra~\eqref{eq:frota}, que resulta em $F=\frotaMax$ veículos. Da mesma
+forma, a capacidade do corredor é o maior número de partidas por hora
+programado hoje ($\bar{P}=\capCorredor$).
+
+\begin{table}[htbp]
+\centering
+\caption{Parâmetros por linha (GTFS) e demanda no cenário central.}
 \label{tab:parametros}
 \small
 \input{tabelas/parametros_linhas.tex}
 \end{table}
 
 \paragraph{Demanda (BHTRANS).}
-Os relatórios mensais da BHTRANS publicam, para o Corredor Antônio Carlos, os
-passageiros registrados por linha troncal e por estação \citep{bhtrans2026}.
-Usou-se a média de dias úteis de março a agosto de 2026. No MOVE, quem embarca
-numa estação passa pela catraca da estação e é registrado nela, e não na linha
-troncal. Por isso, a demanda diária de cada linha é o registro no próprio ônibus
-mais uma parcela dos \embarquesEstacoes{} embarques diários nas estações, rateada
-pelas viagens programadas em dia útil. Como outras linhas também usam as
-estações do corredor, adotaram-se dois limites (Tabela~\ref{tab:demanda}): o
-\textbf{superior} rateia os embarques só entre as cinco linhas do modelo; o
-\textbf{inferior} inclui as demais linhas listadas pela BHTRANS no corredor. A
-demanda diária é distribuída pelas 24 faixas proporcionalmente às viagens
-programadas em cada hora.
+Os relatórios mensais da BHTRANS publicam, para o corredor, os passageiros
+registrados por linha e por estação \citep{bhtrans2026}; usou-se a média de dias
+úteis de março a agosto de 2026. No MOVE, quem embarca numa estação passa pela
+catraca da estação e é registrado nela, e não na linha. A demanda de cada linha
+é, então, o registro no próprio ônibus mais uma parcela dos
+\embarquesEstacoes{} embarques diários nas estações, rateada pelas viagens
+programadas. Como outras linhas também usam as estações, há dois limites
+(Tabela~\ref{tab:demanda}): o inferior (\demandaInf{} pas/dia) rateia os
+embarques entre todas as linhas listadas no corredor e o superior
+(\demandaSup{} pas/dia), só entre as cinco do modelo. A instância é parametrizada
+por $\lambda\in[0,1]$: demanda $=$ inferior $+\,\lambda\,($superior $-$
+inferior$)$; o cenário central usa $\lambda=\lambdaCentral$, e os resultados são
+apresentados para toda a faixa (Seção~\ref{sec:lambda}). A demanda diária é
+distribuída pelas horas proporcionalmente às viagens programadas.
 
 \begin{table}[htbp]
 \centering
@@ -227,132 +257,178 @@ programadas em cada hora.
 \input{tabelas/demanda_bhtrans.tex}
 \end{table}
 
-As principais limitações da demanda são: (i) trata-se de embarques registrados,
-e não da carga medida no trecho crítico -- adota-se, de forma conservadora, que
-todo embarque ocupa o veículo nesse trecho; (ii) passageiros que chegam por linha
-alimentadora e se transferem na estação de integração são registrados na
-alimentadora; e (iii) o perfil horário segue a oferta programada, e não contagens
-por hora.
+\paragraph{Limitações e circularidade.}
+Como o rateio e o perfil horário seguem a grade atual, cada viagem programada
+recebe o mesmo número de embarques: a demanda por linha e por hora é
+proporcional à grade atual. Isso é testado de duas formas: (i) com um perfil
+horário típico, independente da grade (Seção~\ref{sec:robustez}); e (ii)
+comparando o número de embarques por viagem com a capacidade do veículo. No
+limite superior, cada viagem atual receberia \embViagemUm{} embarques, acima dos
+130 lugares do articulado; como a grade atual opera, o limite superior
+superestima a carga no trecho crítico (parte dos passageiros desembarca e é
+substituída ao longo do trajeto circular). Por isso adota-se o cenário central
+e explicita-se a dependência dos resultados em relação a $\lambda$. Além disso,
+os dados são de embarques, e não de carga medida no trecho crítico, e não
+incluem passageiros que chegam por linhas alimentadoras.
 
 % =====================================================================
 \section{Descrição do algoritmo}\label{sec:algoritmo}
 % =====================================================================
 
 O modelo foi implementado em Python, com a interface \texttt{gurobipy}, e
-resolvido pelo Gurobi Optimizer \versaoGurobi{} \citep{gurobi2026}, um pacote
-comercial de otimização com licença acadêmica. Como há variáveis inteiras, o
-Gurobi aplica um algoritmo de \emph{branch-and-cut}, que combina
+resolvido pelo Gurobi Optimizer \versaoGurobi{} \citep{gurobi2026}. Como há
+variáveis inteiras, o Gurobi aplica \emph{branch-and-cut}, que combina
 \emph{branch-and-bound} com planos de corte \citep{arenales2007, hillier2013}:
-
 \begin{enumerate}
-\item \textbf{Pré-processamento (\emph{presolve}):} simplifica o modelo,
-removendo restrições redundantes e apertando limites de variáveis.
-\item \textbf{Relaxação linear:} resolve o problema com $f_{lt}$ contínuo pelo
-método simplex. O valor obtido é um limite inferior para o ótimo inteiro.
-\item \textbf{Planos de corte:} acrescenta desigualdades válidas (por exemplo,
-cortes de Gomory e MIR) que eliminam soluções fracionárias sem excluir soluções
-inteiras, aproximando a relaxação do problema inteiro.
-\item \textbf{Heurísticas primais:} buscam soluções inteiras viáveis; a melhor
-encontrada é o limite superior.
-\item \textbf{Ramificação (\emph{branching}):} se a solução da relaxação tem
-algum $f_{lt}$ fracionário, o problema é dividido em dois subproblemas
-($f_{lt}\le\lfloor f^*_{lt}\rfloor$ e $f_{lt}\ge\lceil f^*_{lt}\rceil$),
-resolvidos da mesma forma.
-\item \textbf{Parada:} o algoritmo termina quando a distância relativa entre os
-limites superior e inferior (\emph{gap}) fica abaixo de 0{,}01\% (tolerância
-padrão).
+\item \textbf{Pré-processamento:} simplifica o modelo; aqui, reduziu-o a 138
+restrições e 204 variáveis.
+\item \textbf{Relaxação linear} pelo método simplex, que fornece um limite
+inferior para o ótimo (R\$~\Zrelax{}).
+\item \textbf{Planos de corte:} desigualdades válidas que eliminam soluções
+fracionárias; o log registra \cortesGomory{} cortes de Gomory e \cortesMIR{}
+cortes MIR.
+\item \textbf{Heurísticas primais} para encontrar soluções inteiras (limite
+superior).
+\item \textbf{Ramificação} sobre variáveis fracionárias, se necessário.
+\item \textbf{Parada} quando o gap relativo entre os limites fica abaixo de
+0{,}01\%.
 \end{enumerate}
+Na instância central, a solução ótima foi encontrada no nó raiz
+(\nosExplorados{} nó, \iteracoesSimplex{} iterações do simplex, \tempoSolucao{}~s),
+com gap final de \gapFinal\%. Os cortes fecharam a distância de \gapInt\% entre a
+relaxação linear e o ótimo inteiro (gap de integralidade); a ausência de
+ramificação reflete a estrutura do problema e o bom desempenho dos cortes do
+\emph{solver}, e não a ausência de inteiros fracionários na relaxação. O
+Apêndice~\ref{ap:log} reproduz o log.
 
-Na instância principal, o Gurobi encontrou a solução ótima no nó raiz, sem
-ramificação, em menos de um segundo: os planos de corte fecharam a distância
-entre a relaxação linear e o ótimo inteiro.
+\paragraph{Fronteira de Pareto.}
+A soma ponderada~\eqref{eq:fo} só encontra soluções suportadas da fronteira.
+Para obtê-la de forma completa usou-se o método $\varepsilon$-restrição: minimizar
+o custo operacional sujeito a $\sum w_{lt}\le\varepsilon$, variando $\varepsilon$
+entre a menor espera possível (obtida lexicograficamente) e 30\% da demanda.
 
 \paragraph{Dualidade e pós-otimização.}
-Como um PLIM não tem variáveis duais, resolveu-se também a relaxação linear do
-modelo e extraíram-se: os valores duais (preços-sombra) das restrições de frota
-e de atendimento, as folgas e os intervalos do lado direito em que cada
-preço-sombra permanece válido \citep{arenales2007}. Para validar os preços-sombra
-no problema inteiro, o PLIM foi re-otimizado aumentando em um veículo o limite
-de frota de cada faixa.
+Um PLIM não possui variáveis duais. Resolveu-se, então, a relaxação linear e
+extraíram-se os preços-sombra das restrições de frota, corredor e atendimento,
+as folgas e os intervalos do lado direito em que cada preço-sombra é válido
+\citep{arenales2007}. Para validá-los no problema inteiro, o PLIM foi
+re-otimizado com uma unidade a mais no lado direito de cada restrição.
 
 \paragraph{Implementação.}
-O código está organizado em scripts: extração do GTFS
-(\texttt{extracao\_dados\_gtfs.py}), extração da demanda
-(\texttt{demanda\_pbh.py}), montagem da instância
-(\texttt{cria\_instancia\_teste.py}), o modelo (\texttt{modelo.py}) e as análises
-(\texttt{otimizacao.py}, \texttt{gera\_instancias.py},
-\texttt{analise\_sensibilidade\_alpha.py} e \texttt{analise\_dual.py}). Todos os
-parâmetros ficam em \texttt{config.py}.
+Os parâmetros ficam em \texttt{config.py}; o modelo, em \texttt{modelo.py}; a
+extração de dados em \texttt{extracao\_dados\_gtfs.py} e
+\texttt{demanda\_pbh.py}; e cada análise num script próprio. O arquivo
+\texttt{executar\_tudo.py} reproduz todos os resultados deste artigo.
 
 % =====================================================================
 \section{Resultados e análise}\label{sec:resultados}
 % =====================================================================
 
-\subsection{Solução da instância principal}
+\subsection{Solução do cenário central}
 
-Com $F=\frotaMax$ veículos, $\alpha_1=\alfaUm$, $\alpha_2=\alfaDois$ e demanda no
-limite superior, a solução ótima tem $Z=$~R\$~\Zotimo{}, com custo operacional de
-R\$~\custoTotal{}, \viagensTotal{} viagens no dia e \naoAtendidos{} passageiros
-não atendidos (\pctNaoAtendidos\% da demanda de \demandaTotal{} passageiros).
-A Tabela~\ref{tab:resultados} detalha a solução por linha.
+Com $\lambda=\lambdaCentral$ (\demandaTotal{} passageiros por dia),
+$F=\frotaMax$ articulados e $\alpha_2=$ R\$~\alfaDois{} por passageiro-hora, a
+solução ótima tem $Z=$ R\$~\Zotimo{}, custo operacional de R\$~\custoTotal{},
+\viagensTotal{} viagens e espera excedente de \naoAtendidos{} passageiro-hora
+(\pctNaoAtendidos\% da demanda) -- Tabela~\ref{tab:resultados} e
+Figura~\ref{fig:frota}. A frota fica no limite só às \horaPrecoMax{}, e a espera
+se concentra no início do pico da manhã: os ônibus que partem nesse período
+continuam em circulação na hora seguinte, quando a frota já está toda ocupada.
 
 \begin{table}[htbp]
 \centering
-\caption{Solução ótima por linha (valores diários).}
+\caption{Solução ótima por linha no cenário central (valores diários).}
 \label{tab:resultados}
 \small
 \input{tabelas/resultados_linhas.tex}
 \end{table}
 
-A Figura~\ref{fig:frota} mostra que a frota atinge o limite às
-\horasFrotaLimite{}. Os maiores déficits ocorrem no início dos picos: os ônibus
-que partem nessas horas continuam em circulação na faixa seguinte, quando a
-frota já está no limite. Esse efeito só é capturado pela restrição de frota
-acumulada.
-
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.85\textwidth]{frota_deficit_por_hora.pdf}
-\caption{Ônibus em operação (acima) e passageiros não atendidos (abaixo) por faixa horária.}
+\caption{Ônibus em operação (solução ótima e grade atual) e passageiros esperando ao fim de cada faixa.}
 \label{fig:frota}
 \end{figure}
 
-A Figura~\ref{fig:linhas} compara demanda e capacidade ofertada por linha. Fora
-dos picos, a capacidade acompanha a demanda de perto. Nos inícios dos picos, o
-modelo concentra a frota nas linhas de ciclo mais curto (51 e 52), que
-transportam mais passageiros por veículo-hora, e reduz drasticamente a oferta da
-linha 64, cujo ciclo é o mais longo. A solução é eficiente para o objetivo
-agregado, mas concentra o déficit numa única linha -- uma questão de equidade que
-o modelo, na forma atual, não trata.
-\afazer{Discutir: faz sentido operacional? Como incluir equidade (por exemplo,
-limite de déficit por linha)?}
+\subsection{Validação contra a grade atual}
+
+A grade atual do GTFS foi avaliada com as mesmas regras do modelo
+(Tabela~\ref{tab:validacao} e Figuras~\ref{fig:partidas} e~\ref{fig:linhas}).
+A solução ótima usa a mesma frota e respeita o mesmo limite de partidas por hora,
+mas \emph{redistribui} as viagens: reduz a oferta das linhas 52 e 63, que hoje
+têm capacidade acima da demanda, e a aumenta nas linhas 51, 64 e 67. No total, a
+solução tem \variacaoViagens\% mais viagens que a grade atual
+(\viagensTotal{} contra \viagensGTFS{}), concentradas fora do pico, onde ainda há
+veículos ociosos: no cenário central, cada viagem atual recebe
+\embViagemCentral{} embarques, acima da capacidade de 130 passageiros. Com a
+mesma demanda, a grade atual deixaria \naoAtendidosGTFSperda{} passageiros sem
+atendimento (\pctGTFSperda\% da demanda, modo ``perda'').
+
+\begin{table}[htbp]
+\centering
+\caption{Grade atual (GTFS) $\times$ solução ótima no cenário central. $^\ast$Passageiros não transportados na hora, sem fila.}
+\label{tab:validacao}
+\small
+\input{tabelas/validacao_linhas.tex}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{validacao_partidas.pdf}
+\caption{Partidas por hora no corredor: grade atual e solução ótima.}
+\label{fig:partidas}
+\end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.85\textwidth]{demanda_capacidade_linhas.pdf}
-\caption{Demanda e capacidade ofertada por linha e faixa horária.}
+\caption{Demanda, capacidade ótima e capacidade da grade atual por linha e faixa horária.}
 \label{fig:linhas}
 \end{figure}
 
-\paragraph{Limite inferior de demanda.}
-Com a demanda no limite inferior (\demandaInf{} passageiros por dia), o modelo
-deixa \naoAtendidosInf{} passageiros sem atendimento (\pctNaoAtendidosInf\%),
-com custo de R\$~\custoInf{} e frota máxima de \frotaMaxInf{} veículos. A frota
-de \frotaMax{} veículos é suficiente no limite inferior e insuficiente nos picos
-do limite superior; a demanda real está entre os dois.
+\subsection{Resultados por nível de demanda}\label{sec:lambda}
 
-\subsection{Cenários de tipologia e tamanho de frota}
-
-A Tabela~\ref{tab:cenarios} e a Figura~\ref{fig:cenarios} comparam cenários de
-composição da frota. Nos cenários 0 a 3, o custo por quilômetro é de R\$~12,50
-para articulados (130 lugares) e R\$~9,50 para Padron (85 lugares). Converter a
-frota para articulados (cenário~2) reduz os passageiros não atendidos mais do que
-ampliar a frota de 90 para 110 veículos mantendo os Padron (cenário~3), e com
-custo menor: o gargalo é a capacidade ofertada por veículo-hora.
+A Tabela~\ref{tab:lambda} e a Figura~\ref{fig:lambda} repetem a otimização para
+toda a faixa de demanda. No limite inferior ($\lambda=0$), a frota atual sobra:
+seriam necessários \frotaNecZero{} veículos, a espera é de \pctLambdaZero\% e o
+preço-sombra da frota é nulo -- não há escassez. A partir do cenário central, a
+frota de \frotaMax{} veículos passa a ser insuficiente no pico da manhã: no
+limite superior, seriam necessários \frotaNecUm{} veículos, a espera chega a
+\pctLambdaUm\% e um veículo adicional no pico vale R\$~\precoLambdaUm{}. As
+conclusões qualitativas -- o gargalo no início do pico da manhã e a
+redistribuição entre linhas -- valem em toda a faixa em que há escassez; os
+valores numéricos devem ser lidos condicionados a $\lambda$.
 
 \begin{table}[htbp]
 \centering
-\caption{Comparação de cenários de frota.}
+\caption{Resultados por nível de demanda ($\lambda=0$: limite inferior; $\lambda=1$: superior).}
+\label{tab:lambda}
+\small
+\input{tabelas/demanda_lambda.tex}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{demanda_lambda.pdf}
+\caption{Espera excedente, frota necessária e maior preço-sombra da frota em função de $\lambda$ (linha pontilhada: cenário central).}
+\label{fig:lambda}
+\end{figure}
+
+\subsection{Cenários de frota e infraestrutura}
+
+Nos cenários da Tabela~\ref{tab:cenarios} e da Figura~\ref{fig:cenarios}, o
+modelo \emph{decide} o tipo de veículo de cada viagem; o cenário só altera o que
+está disponível. Com 90 articulados (valor da proposta inicial), a espera sobe
+para \pctFnoventa\%. Acrescentar 15 ônibus Padron reduz a espera para
+\pctPadron\% e, ao mesmo tempo, o custo para R\$~\custoPadron{}: o modelo usa os
+Padron, mais baratos por quilômetro, em \viagensPadron{} viagens -- nenhuma às
+6h e 7h, as horas críticas --, liberando os articulados para o pico da manhã. Ampliar o corredor em 20\% não altera a
+solução, e relaxar o padrão de serviço também não: no cenário central, o
+gargalo é a frota, e não a infraestrutura nem o intervalo mínimo entre ônibus.
+
+\begin{table}[htbp]
+\centering
+\caption{Cenários (cenário central de demanda). ``Padron'': viagens feitas com Padron.}
 \label{tab:cenarios}
 \small
 \input{tabelas/cenarios.tex}
@@ -360,95 +436,119 @@ custo menor: o gargalo é a capacidade ofertada por veículo-hora.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{cenarios.pdf}
-\caption{Demanda não atendida e custo operacional por cenário.}
+\includegraphics[width=0.9\textwidth]{cenarios.pdf}
+\caption{Espera excedente e custo operacional por cenário.}
 \label{fig:cenarios}
 \end{figure}
 
-\subsection{Sensibilidade ao peso $\alpha_2$}
+\subsection{Fronteira de Pareto e escolha de $\alpha_2$}
 
-Variou-se a penalidade por passageiro não atendido, mantendo $\alpha_1=1$ e
-$F=\frotaMax$ (Figura~\ref{fig:sensibilidade} e Tabela~\ref{tab:sensibilidade}).
-Abaixo do ponto de equilíbrio $c_{lt}/C_l$ (entre cerca de R\$~1,50 e R\$~3,60
-por passageiro, conforme a linha), é mais barato deixar o passageiro no ponto do
-que realizar a viagem, e o modelo opera apenas a frequência mínima. Entre
-R\$~2 e R\$~3,50 o nível de serviço sobe rapidamente. A partir de R\$~10 o ganho
-é marginal, pois o limite passa a ser a frota nos picos, e não o custo. O valor
-adotado ($\alpha_2=\alfaDois$) está nessa região estável.
+A Figura~\ref{fig:pareto} mostra a fronteira custo $\times$ espera obtida pelo
+método $\varepsilon$-restrição e as soluções da soma ponderada para vários
+valores de $\alpha_2$ (Tabela~\ref{tab:sensibilidade}), que caem sobre a
+fronteira. Perto do extremo de melhor serviço, reduzir um passageiro-hora de
+espera custa cerca de R\$~\custoMarginalPareto; mais à direita, o custo marginal
+cai abaixo de R\$~1. Como $\alpha_2$ é o valor atribuído a cada passageiro-hora,
+qualquer $\alpha_2$ acima do custo marginal do extremo leva praticamente à
+mesma solução: com $\alpha_2=$ R\$~\alfaDois{}, a soma ponderada se comporta, na
+prática, de forma lexicográfica (primeiro minimiza a espera, depois o custo).
+A fronteira explicita o \emph{trade-off} que a soma ponderada esconde: um gestor
+que atribua ao passageiro-hora um valor menor escolheria pontos mais à direita.
+\afazer{Discutir a escolha de $\alpha_2$ (por exemplo, como valor do tempo do
+passageiro) e citar uma referência.}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{sensibilidade_alpha2.pdf}
-\caption{Demanda não atendida e custo operacional em função de $\alpha_2$.}
-\label{fig:sensibilidade}
+\includegraphics[width=0.85\textwidth]{fronteira_pareto.pdf}
+\caption{Fronteira de Pareto custo operacional $\times$ espera excedente.}
+\label{fig:pareto}
 \end{figure}
 
 \begin{table}[htbp]
 \centering
-\caption{Análise de sensibilidade de $\alpha_2$.}
+\caption{Soluções da soma ponderada para diferentes valores de $\alpha_2$.}
 \label{tab:sensibilidade}
 \small
 \input{tabelas/sensibilidade.tex}
 \end{table}
 
-\subsection{Dualidade e pós-otimização}
+\subsection{Robustez}\label{sec:robustez}
 
-O valor ótimo da relaxação linear é R\$~\Zrelax{}, contra R\$~\Zotimo{} do PLIM:
-gap de integralidade de \gapInt\%. A Tabela~\ref{tab:duais} e a
-Figura~\ref{fig:duais} mostram o preço-sombra da restrição de frota, isto é, a
-redução de $Z$ obtida com um veículo a mais em cada faixa. Ele só é positivo
-quando a frota está no limite; nas demais faixas há folga e o preço-sombra é
-zero, como estabelece o teorema das folgas complementares. O veículo mais valioso
-é o das \horaPrecoMax{} (R\$~\precoSombraMax{}).
+A Tabela~\ref{tab:robustez} repete o cenário central com (i) um perfil horário
+típico de corredor, independente da grade atual, e (ii) o modo ``perda'', em que
+o passageiro não atendido desiste em vez de esperar. Em ambos, o número de
+viagens e o custo variam pouco e a frota continua próxima do limite nos picos.
+Com o perfil típico, que concentra mais demanda no fim da tarde, o pico da tarde
+também se aproxima do limite. As conclusões principais, portanto, não dependem
+da circularidade da demanda nem da hipótese sobre o comportamento do passageiro
+não atendido.
 
 \begin{table}[htbp]
 \centering
-\caption{Preços-sombra da restrição de frota e validação no problema inteiro.}
+\caption{Testes de robustez no cenário central.}
+\label{tab:robustez}
+\small
+\input{tabelas/robustez.tex}
+\end{table}
+
+\subsection{Dualidade e pós-otimização}
+
+O valor ótimo da relaxação linear é R\$~\Zrelax{} (gap de integralidade de
+\gapInt\%). A Tabela~\ref{tab:duais} mostra as únicas restrições de frota e de
+corredor com valor marginal positivo. Pelo teorema das folgas complementares, o
+preço-sombra só é positivo onde a restrição está ativa: a frota às
+\horaPrecoMax{} (R\$~\precoSombraMax{} por veículo, válido na faixa indicada do
+lado direito) e o corredor às 6h, com valor bem menor. No problema inteiro, um
+veículo a mais às \horaPrecoMax{} reduz $Z$ em R\$~\deltaPLIMMax{}, confirmando o
+preço-sombra. Em todas as outras faixas há folga, e o preço-sombra é zero -- assim
+como em todas as faixas no limite inferior de demanda.
+
+\begin{table}[htbp]
+\centering
+\caption{Restrições de frota e de corredor com valor marginal positivo, e validação no PLIM.}
 \label{tab:duais}
 \small
 \input{tabelas/duais_frota.tex}
 \end{table}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.85\textwidth]{precos_sombra_frota.pdf}
-\caption{Preço-sombra da frota (relaxação linear) e redução real de $Z$ no PLIM com um veículo adicional.}
-\label{fig:duais}
-\end{figure}
-
-No problema inteiro, os ganhos com um veículo adicional são menores que os
-previstos pelo preço-sombra, porque as frequências são inteiras. Às 16h, a
-relaxação linear tem folga (preço-sombra nulo), mas o PLIM ainda reduz $Z$ com um
-veículo a mais, pois ele permite arredondar uma frequência para cima. Os duais da
-restrição de atendimento se dividem em três regimes coerentes com a teoria: iguais
-a $c_{lt}/C_l$ quando a frota tem folga (\regimeFolga{} pares), maiores que
-$c_{lt}/C_l$ quando a frota está no limite (\regimeLimite{} pares) e iguais a
-$\alpha_2$ quando já há passageiros não atendidos (\regimeAlfa{} pares).
+Os duais da restrição de atendimento~\eqref{eq:demanda} -- o custo marginal de
+um passageiro a mais em $(l,t)$ -- têm interpretação direta: iguais ao custo por
+lugar $c/C$ quando a frota tem folga (\regimeFolga{} pares); maiores que $c/C$
+quando frota ou corredor estão no limite (\regimeLimite{} pares); menores que
+$c/C$ quando o padrão de serviço já garante capacidade de sobra
+(\regimeSobra{} pares); e ligados a $\alpha_2$ quando há fila
+(\regimeFila{} pares).
 
 % =====================================================================
 \section{Conclusões}\label{sec:conclusao}
 % =====================================================================
 
-Este trabalho formulou a definição de frequências das linhas troncais do MOVE no
-Corredor Antônio Carlos como um PLIM bi-objetivo ponderado, com uma restrição de
-frota que acompanha os veículos ao longo de todo o seu ciclo. A instância foi
-construída com dados oficiais da BHTRANS, e o Gurobi resolveu o modelo de forma
-exata em menos de um segundo.
+Este trabalho formulou a definição de frequências e tipos de veículo das linhas
+troncais do MOVE no Corredor Antônio Carlos como um PLIM com frota acumulada,
+fila de passageiros, capacidade do corredor e padrão de serviço. A instância usa
+dados oficiais da BHTRANS e foi validada contra a grade atual, e o Gurobi a
+resolveu de forma exata em menos de um segundo.
 
-Os resultados mostram que a frota de \frotaMax{} veículos é o gargalo no início
-dos picos; que converter a frota para articulados reduz os passageiros não
-atendidos mais do que ampliar a frota de ônibus Padron; e que o veículo
-adicional de maior valor é o do pico da manhã. A análise de dualidade e a
-validação no problema inteiro mostraram que os preços-sombra da relaxação linear
-são uma boa aproximação do valor marginal da frota.
+Os resultados indicam que, com a frota atual, a solução ótima redistribui as
+viagens entre as linhas e reduz a espera em relação à grade atual; que o
+gargalo é a frota no início do pico da manhã, com o veículo das \horaPrecoMax{}
+como o de maior valor marginal; e que complementar a frota com ônibus Padron
+reduz, ao mesmo tempo, o custo e a espera. Os valores dependem do nível de
+demanda, que os dados disponíveis só permitem delimitar num intervalo: no limite
+inferior, a frota atual sobra; no superior, seria insuficiente.
 
-Como trabalhos futuros, destacam-se: obter dados de carregamento no trecho
-crítico e contagens por hora; incluir restrições de equidade entre linhas; e
-estender o modelo para o projeto conjunto das linhas e frequências.
+Como trabalhos futuros, destacam-se: obter a carga medida no trecho crítico e
+contagens por hora (eliminando a dependência em relação à grade atual); incluir
+as linhas alimentadoras e as transferências; e estender o modelo ao projeto
+conjunto de linhas e frequências.
 
 \afazer{Revisar as conclusões com a visão do grupo.}
 
 \bibliographystyle{plainnat}
 \bibliography{referencias}
+
+\appendix
+\section{Log do Gurobi (cenário central)}\label{ap:log}
+{\footnotesize\verbatiminput{tabelas/log_gurobi_trecho.txt}}
 
 \end{document}

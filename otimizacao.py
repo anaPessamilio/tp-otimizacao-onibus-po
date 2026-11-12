@@ -1,58 +1,50 @@
+"""
+Resolve a instância principal (config.py) e exporta os resultados.
+O log completo do Gurobi é salvo em log_gurobi.txt (status, nós, cortes, gap).
+"""
+
 import pandas as pd
 
-from config import ALPHA_1, ALPHA_2, FROTA_MAX
-from modelo import resolver_modelo
+import config
+from modelo import faixas_frota_saturada, resolver_modelo
 
-# ==========================================
-# 1. CARREGAMENTO DA INSTÂNCIA
-# ==========================================
-# Parâmetros por (linha, faixa): c_lt (R$/viagem), tempo_ciclo_horas (n_lt),
-# capacidade_C (C_l), d_lt (pas/hora), f_min e f_max (viagens/hora).
-df_instancia = pd.read_csv("instancia_modelo_bhtrans.csv")
+df_instancia = pd.read_csv("instancia_modelo_bhtrans.csv", dtype={"route_short_name": str})
 
-# ==========================================
-# 2. RESOLUÇÃO DO MODELO (implementação em modelo.py)
-# ==========================================
-res = resolver_modelo(
-    df_instancia,
-    frota_max=FROTA_MAX,
-    alpha_1=ALPHA_1,
-    alpha_2=ALPHA_2,
-    nome="Otimizacao_Frequencia_BHTRANS",
-    log=True,
-)
+res = resolver_modelo(df_instancia, nome="Otimizacao_Frequencia_MOVE", log=True,
+                      arquivo_log="log_gurobi.txt")
 
-# ==========================================
-# 3. EXTRAÇÃO E EXPORTAÇÃO DOS RESULTADOS
-# ==========================================
 if "detalhe" not in res:
-    print("\nO modelo não encontrou solução ótima. Status:", res["status"])
-else:
-    print("\n" + "=" * 50)
-    print("SOLUÇÃO ÓTIMA ENCONTRADA COM SUCESSO!")
-    print("=" * 50)
-    print(f"Valor da Função Objetivo (Z): R$ {res['valor_obj_Z']:,.2f}")
-    print(f"  - Custo Operacional Total:  R$ {res['custo_operacional']:,.2f}")
-    print(
-        f"  - Passageiros Não Atendidos: {res['passageiros_represados']:,.0f} "
-        f"de {res['demanda_total']:,} "
-        f"({100 * res['passageiros_represados'] / res['demanda_total']:.1f}%)"
-    )
+    raise SystemExit(f"O modelo não encontrou solução ótima. Status: {res['status']}")
 
-    df_resultados = res["detalhe"]
-    df_resultados.to_csv("resultados_otimizacao_bhtrans.csv", index=False)
+unid = "passageiro-hora de espera" if config.NAO_ATENDIDOS == "espera" else "passageiros perdidos"
+print("\n" + "=" * 60)
+print("SOLUÇÃO ÓTIMA")
+print("=" * 60)
+print(f"Z = R$ {res['valor_obj_Z']:,.2f}   (limitante inferior R$ {res['limitante']:,.2f}, "
+      f"gap {100 * res['gap']:.4f}%, {res['nos']:.0f} nó(s), {res['tempo_s']:.2f} s)")
+print(f"  Custo operacional: R$ {res['custo_operacional']:,.2f}")
+print(f"  Não atendidos ({unid}): {res['passageiros_represados']:,.0f} "
+      f"({100 * res['passageiros_represados'] / res['demanda_total']:.1f}% da demanda de "
+      f"{res['demanda_total']:,})")
+for k, t in res["tipos"].items():
+    if t["frota"] > 0:
+        print(f"  Frota {k}: limite {t['frota']}, máximo usado "
+              f"{res['frota_por_tipo'][k].max():.1f}")
+print(f"  Capacidade do corredor: {res['cap_corredor']} partidas/h "
+      f"(máximo usado {res['detalhe'].groupby('faixa_horaria')['frequencia_otima'].sum().max()})")
+print(f"  Faixas com frota no limite: {faixas_frota_saturada(res)}")
 
-    print("\n--- RESUMO OPERACIONAL POR LINHA (VALORES TOTAIS DIÁRIOS) ---")
-    resumo = (
-        df_resultados.groupby("linha")
-        .agg(
-            viagens_totais=("frequencia_otima", "sum"),
-            demanda_total=("demanda", "sum"),
-            capacidade_ofertada_total=("capacidade_ofertada", "sum"),
-            passageiros_represados_totais=("passageiros_represados", "sum"),
-            custo_operacional_total=("custo_operacional_R$", "sum"),
-        )
-        .reset_index()
-    )
-    print(resumo.to_string(index=False))
-    print("\nArquivo detalhado 'resultados_otimizacao_bhtrans.csv' gerado com sucesso!")
+df_resultados = res["detalhe"]
+df_resultados.to_csv("resultados_otimizacao_bhtrans.csv", index=False)
+
+print("\n--- RESUMO POR LINHA (VALORES DIÁRIOS) ---")
+resumo = df_resultados.groupby("linha").agg(
+    viagens_otimas=("frequencia_otima", "sum"),
+    viagens_gtfs=("viagens_gtfs", "sum"),
+    demanda=("demanda", "sum"),
+    capacidade_ofertada=("capacidade_ofertada", "sum"),
+    nao_atendidos=("passageiros_represados", "sum"),
+    custo=("custo_operacional_R$", "sum"),
+).reset_index()
+print(resumo.to_string(index=False))
+print("\nArquivos: 'resultados_otimizacao_bhtrans.csv' e 'log_gurobi.txt'.")

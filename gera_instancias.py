@@ -1,134 +1,75 @@
+"""
+Cenários de disponibilidade de frota e de infraestrutura. Em todos eles o
+modelo DECIDE quantas viagens de cada tipo de veículo (articulado / Padron)
+cada linha faz em cada faixa; o cenário só muda o que está disponível.
+"""
+
+import copy
+
 import pandas as pd
 
-from config import (
-    ALPHA_1,
-    ALPHA_2,
-    CAP_ARTICULADO,
-    CAP_PADRON,
-    CUSTO_KM_ARTICULADO,
-    CUSTO_KM_MEDIO,
-    CUSTO_KM_PADRON,
-    D_L_RELATORIO,
-    FROTA_MAX,
-    LINHAS_CORREDOR,
-    USAR_EXTENSAO_GTFS,
-)
-from modelo import resolver_modelo
+import config
+from modelo import capacidade_corredor, frota_grade_atual, resolver_modelo
 
-# 1. Carrega a instância base tratada
-df_base = pd.read_csv("instancia_modelo_bhtrans.csv")
-
-# O read_csv lê as linhas como inteiros; os dicionários usam chaves texto.
-df_base["route_short_name"] = df_base["route_short_name"].astype(str).str.strip()
+df_base = pd.read_csv("instancia_modelo_bhtrans.csv", dtype={"route_short_name": str})
+F0 = frota_grade_atual(df_base)
+CAP0 = capacidade_corredor(df_base)
 
 
-# 2. Definição dos Cenários de Teste
-def frota(articulados, custo_art=CUSTO_KM_ARTICULADO, custo_pad=CUSTO_KM_PADRON):
-    """Monta capacidades e custo/km por linha: articulado nas linhas
-    indicadas, padron nas demais."""
-    capacidades = {
-        l: CAP_ARTICULADO if l in articulados else CAP_PADRON
-        for l in LINHAS_CORREDOR
-    }
-    custo_km = {
-        l: custo_art if l in articulados else custo_pad
-        for l in LINHAS_CORREDOR
-    }
-    return {"capacidades": capacidades, "custo_km": custo_km}
+def tipos(art, pad):
+    t = copy.deepcopy(config.TIPOS_VEICULO)
+    t["articulado"]["frota"] = art
+    t["padron"]["frota"] = pad
+    return t
 
 
-cenarios = {
-    # Mesma configuração de otimizacao.py: 100% articulado com custo/km
-    # médio (R$ 11,00). Serve de referência e validação cruzada.
-    "Cenario_R_Relatorio": {
-        "frota_max": FROTA_MAX,
-        **frota(LINHAS_CORREDOR, CUSTO_KM_MEDIO, CUSTO_KM_MEDIO),
-    },
-    # Demais cenários: custo/km por tipologia (articulado x padron).
-    "Cenario_0_Baseline": {
-        "frota_max": FROTA_MAX,
-        **frota(["51"]),
-    },
-    "Cenario_1_Frota_Mista_MOVE": {
-        "frota_max": FROTA_MAX,
-        **frota(["51", "52", "63"]),
-    },
-    "Cenario_2_100pct_Articulados": {
-        "frota_max": FROTA_MAX,
-        **frota(LINHAS_CORREDOR),
-    },
-    "Cenario_3_Expansao_Frota_110": {
-        "frota_max": 110,
-        **frota(["51"]),
-    },
-}
+def relaxar_padrao(df):
+    d = df.copy()
+    d["f_min"] = (d["f_min"] > 0).astype(int)  # só 1 viagem/h onde opera
+    return d
 
-resultados_globais = []
-detalhamento_linhas = []
 
-# 3. Execução dos cenários (modelo em modelo.py)
-for nome_cenario, cfg in cenarios.items():
-    df_cenario = df_base.copy()
+cenarios = [
+    # nome, instância, tipos, capacidade do corredor
+    (f"Base: {F0} articulados (grade atual)", df_base, tipos(F0, 0), "config"),
+    ("Frota de 90 articulados (proposta inicial)", df_base, tipos(90, 0), "config"),
+    (f"+10 articulados ({F0 + 10})", df_base, tipos(F0 + 10, 0), "config"),
+    (f"+15 Padron ({F0} art. + 15 Padron)", df_base, tipos(F0, 15), "config"),
+    (f"Troca de 20 art. por 30 Padron ({F0 - 20} + 30)", df_base, tipos(F0 - 20, 30), "config"),
+    (f"Corredor +20% ({round(CAP0 * 1.2)} partidas/h)", df_base, tipos(F0, 0), round(CAP0 * 1.2)),
+    ("Padrão de serviço relaxado (f_min = 1)", relaxar_padrao(df_base), tipos(F0, 0), "config"),
+]
 
-    df_cenario["capacidade_C"] = (
-        df_cenario["route_short_name"].map(cfg["capacidades"]).astype(int)
-    )
-    custo_por_km = df_cenario["route_short_name"].map(cfg["custo_km"]).astype(float)
-    # c_l = D_l (ida + volta) x Custo/km da tipologia
-    D_l = df_cenario["extensao_km"] if USAR_EXTENSAO_GTFS else D_L_RELATORIO
-    df_cenario["c_lt"] = (D_l * custo_por_km).round(2)
-
-    res = resolver_modelo(
-        df_cenario,
-        frota_max=cfg["frota_max"],
-        alpha_1=ALPHA_1,
-        alpha_2=ALPHA_2,
-        nome=nome_cenario,
-    )
-
+resumo, detalhe = [], []
+for nome, df, tp, cap in cenarios:
+    res = resolver_modelo(df, tipos=tp, cap_corredor=cap, nome=nome[:40])
     if "detalhe" not in res:
-        print(f"{nome_cenario}: sem solução ótima (status {res['status']})")
+        print(f"{nome}: sem solução ótima (status {res['status']})")
         continue
-
-    resultados_globais.append(
-        {
-            "cenario": nome_cenario,
-            "frota_max": cfg["frota_max"],
-            "custo_operacional_R$": round(res["custo_operacional"], 2),
-            "passageiros_represados": round(res["passageiros_represados"], 0),
-            "pct_nao_atendida": round(
-                100 * res["passageiros_represados"] / res["demanda_total"], 1
-            ),
-            "valor_obj_Z": round(res["valor_obj_Z"], 2),
-        }
-    )
-
-    por_linha = res["detalhe"].groupby("linha").agg(
-        viagens_totais=("frequencia_otima", "sum"),
+    det = res["detalhe"]
+    resumo.append({
+        "cenario": nome,
+        "frota_articulado": tp["articulado"]["frota"],
+        "frota_padron": tp["padron"]["frota"],
+        "cap_corredor": res["cap_corredor"],
+        "viagens": int(det["frequencia_otima"].sum()),
+        "viagens_padron": int(det["f_padron"].sum()),
+        "custo_operacional_R$": round(res["custo_operacional"], 2),
+        "passageiros_represados": round(res["passageiros_represados"], 0),
+        "pct_nao_atendida": round(100 * res["passageiros_represados"] / res["demanda_total"], 2),
+        "valor_obj_Z": round(res["valor_obj_Z"], 2),
+        "menor_freq_pico": int(det[det["faixa_horaria"].isin(config.HORAS_PICO)]["frequencia_otima"].min()),
+    })
+    g = det.groupby("linha").agg(
+        viagens=("frequencia_otima", "sum"), viagens_padron=("f_padron", "sum"),
         passageiros_represados=("passageiros_represados", "sum"),
-        custo_linha=("custo_operacional_R$", "sum"),
-    )
-    for l, v in por_linha.iterrows():
-        detalhamento_linhas.append(
-            {
-                "cenario": nome_cenario,
-                "linha": l,
-                "tipologia": (
-                    "Articulado" if cfg["capacidades"][l] == CAP_ARTICULADO else "Padron"
-                ),
-                "viagens_totais": int(v["viagens_totais"]),
-                "passageiros_represados": round(v["passageiros_represados"], 1),
-                "custo_linha_R$": round(v["custo_linha"], 2),
-            }
-        )
+        custo=("custo_operacional_R$", "sum"))
+    for l, r in g.iterrows():
+        detalhe.append({"cenario": nome, "linha": l, **r.round(1).to_dict()})
 
-# 4. Salva e Exibe as Tabelas de Resumo
-df_resumo_cenarios = pd.DataFrame(resultados_globais)
-df_detalhamento = pd.DataFrame(detalhamento_linhas)
+df_resumo = pd.DataFrame(resumo)
+df_resumo.to_csv("comparativo_resumo_cenarios.csv", index=False)
+pd.DataFrame(detalhe).to_csv("comparativo_detalhado_linhas.csv", index=False)
 
-df_resumo_cenarios.to_csv("comparativo_resumo_cenarios.csv", index=False)
-df_detalhamento.to_csv("comparativo_detalhado_linhas.csv", index=False)
-
-print("=== COMPARATIVO DE CENÁRIOS EXECUTADO COM SUCESSO ===")
-print("\n--- RESUMO EXECUTIVO DOS CENÁRIOS: ---")
-print(df_resumo_cenarios.to_string(index=False))
+print("=== CENÁRIOS (o modelo escolhe o tipo de veículo) ===")
+print(df_resumo.drop(columns=["valor_obj_Z"]).to_string(index=False))

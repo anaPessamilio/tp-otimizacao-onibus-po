@@ -1,6 +1,8 @@
-cenario,frota_max,custo_operacional_R$,passageiros_represados,pct_nao_atendida,valor_obj_Z
-Cenario_R_Relatorio,90,273159.44,8052.0,7.1,474459.44
-Cenario_0_Baseline,90,297250.92,18569.0,16.3,761475.92
-Cenario_1_Frota_Mista_MOVE,90,306153.14,14097.0,12.4,658578.14
-Cenario_2_100pct_Articulados,90,310407.85,8052.0,7.1,511707.85
-Cenario_3_Expansao_Frota_110,110,326631.37,11604.0,10.2,616731.37
+cenario,frota_articulado,frota_padron,cap_corredor,viagens,viagens_padron,custo_operacional_R$,passageiros_represados,pct_nao_atendida,valor_obj_Z,menor_freq_pico
+Base: 97 articulados (grade atual),97,0,64,728,0,270642.75,1515.0,1.69,308517.75,6
+Frota de 90 articulados (proposta inicial),90,0,64,728,0,270898.99,3382.0,3.78,355448.99,6
++10 articulados (107),107,0,64,729,0,271030.79,873.0,0.98,292855.79,6
++15 Padron (97 art. + 15 Padron),97,15,64,733,96,264162.85,834.0,0.93,285012.85,6
+Troca de 20 art. por 30 Padron (77 + 30),77,30,64,748,138,266044.76,2010.0,2.25,316294.76,6
+Corredor +20% (77 partidas/h),97,0,77,728,0,270617.04,1515.0,1.69,308492.04,6
+Padrão de serviço relaxado (f_min = 1),97,0,64,728,0,270642.32,1515.0,1.69,308517.32,5

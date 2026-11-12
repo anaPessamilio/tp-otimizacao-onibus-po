@@ -1,26 +1,36 @@
-cenario,linha,tipologia,viagens_totais,passageiros_represados,custo_linha_R$
-Cenario_R_Relatorio,51,Articulado,295,463.0,80020.3
-Cenario_R_Relatorio,52,Articulado,116,180.0,23355.44
-Cenario_R_Relatorio,63,Articulado,126,158.0,42430.46
-Cenario_R_Relatorio,64,Articulado,155,5408.0,68148.96
-Cenario_R_Relatorio,67,Articulado,156,1843.0,59204.28
-Cenario_0_Baseline,51,Articulado,295,463.0,90931.77
-Cenario_0_Baseline,52,Padron,172,181.0,29909.08
-Cenario_0_Baseline,63,Padron,179,562.0,51950.58
-Cenario_0_Baseline,64,Padron,165,11298.0,63593.4
-Cenario_0_Baseline,67,Padron,184,6065.0,60866.09
-Cenario_1_Frota_Mista_MOVE,51,Articulado,296,446.0,91243.28
-Cenario_1_Frota_Mista_MOVE,52,Articulado,118,27.0,26998.4
-Cenario_1_Frota_Mista_MOVE,63,Articulado,126,158.0,48216.56
-Cenario_1_Frota_Mista_MOVE,64,Padron,179,10108.0,68727.08
-Cenario_1_Frota_Mista_MOVE,67,Padron,216,3358.0,70967.82
-Cenario_2_100pct_Articulados,51,Articulado,295,463.0,90931.77
-Cenario_2_100pct_Articulados,52,Articulado,116,180.0,26540.8
-Cenario_2_100pct_Articulados,63,Articulado,126,158.0,48216.56
-Cenario_2_100pct_Articulados,64,Articulado,155,5408.0,77441.59
-Cenario_2_100pct_Articulados,67,Articulado,156,1843.0,67277.13
-Cenario_3_Expansao_Frota_110,51,Articulado,296,446.0,91243.28
-Cenario_3_Expansao_Frota_110,52,Padron,176,50.0,30604.64
-Cenario_3_Expansao_Frota_110,63,Padron,184,296.0,53389.78
-Cenario_3_Expansao_Frota_110,64,Padron,203,8168.0,77570.92
-Cenario_3_Expansao_Frota_110,67,Padron,225,2644.0,73822.75
+cenario,linha,viagens,viagens_padron,passageiros_represados,custo
+Base: 97 articulados (grade atual),51,242.0,0.0,101.0,74620.4
+Base: 97 articulados (grade atual),52,90.0,0.0,205.0,20592.0
+Base: 97 articulados (grade atual),63,97.0,0.0,106.0,37018.8
+Base: 97 articulados (grade atual),64,160.0,0.0,256.0,78699.7
+Base: 97 articulados (grade atual),67,139.0,0.0,847.0,59711.8
+Frota de 90 articulados (proposta inicial),51,242.0,0.0,101.0,74620.4
+Frota de 90 articulados (proposta inicial),52,90.0,0.0,205.0,20592.0
+Frota de 90 articulados (proposta inicial),63,97.0,0.0,366.0,37018.8
+Frota de 90 articulados (proposta inicial),64,160.0,0.0,1473.0,78966.6
+Frota de 90 articulados (proposta inicial),67,139.0,0.0,1237.0,59701.2
++10 articulados (107),51,242.0,0.0,101.0,74620.4
++10 articulados (107),52,90.0,0.0,225.0,20592.0
++10 articulados (107),63,98.0,0.0,181.0,37397.6
++10 articulados (107),64,160.0,0.0,169.0,78704.4
++10 articulados (107),67,139.0,0.0,197.0,59716.5
++15 Padron (97 art. + 15 Padron),51,242.0,25.0,103.0,72734.7
++15 Padron (97 art. + 15 Padron),52,90.0,13.0,225.0,19878.2
++15 Padron (97 art. + 15 Padron),63,99.0,23.0,181.0,35677.6
++15 Padron (97 art. + 15 Padron),64,162.0,18.0,137.0,77540.1
++15 Padron (97 art. + 15 Padron),67,140.0,17.0,188.0,58332.2
+Troca de 20 art. por 30 Padron (77 + 30),51,242.0,26.0,159.0,72662.0
+Troca de 20 art. por 30 Padron (77 + 30),52,94.0,24.0,246.0,20189.4
+Troca de 20 art. por 30 Padron (77 + 30),63,101.0,29.0,456.0,35889.7
+Troca de 20 art. por 30 Padron (77 + 30),64,167.0,31.0,97.0,78423.5
+Troca de 20 art. por 30 Padron (77 + 30),67,144.0,28.0,1052.0,58880.3
+Corredor +20% (77 partidas/h),51,242.0,0.0,101.0,74620.4
+Corredor +20% (77 partidas/h),52,90.0,0.0,335.0,20592.0
+Corredor +20% (77 partidas/h),63,97.0,0.0,106.0,37018.8
+Corredor +20% (77 partidas/h),64,160.0,0.0,126.0,78687.0
+Corredor +20% (77 partidas/h),67,139.0,0.0,847.0,59698.8
+Padrão de serviço relaxado (f_min = 1),51,242.0,0.0,101.0,74620.4
+Padrão de serviço relaxado (f_min = 1),52,90.0,0.0,75.0,20592.0
+Padrão de serviço relaxado (f_min = 1),63,97.0,0.0,106.0,37018.8
+Padrão de serviço relaxado (f_min = 1),64,160.0,0.0,386.0,78712.3
+Padrão de serviço relaxado (f_min = 1),67,139.0,0.0,847.0,59698.8

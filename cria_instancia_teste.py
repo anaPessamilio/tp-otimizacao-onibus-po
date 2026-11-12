@@ -1,154 +1,136 @@
+"""
+Monta a instância do modelo (linhas x 24 faixas horárias) a partir de:
+  parametros_gtfs_extraidos.csv          (extracao_dados_gtfs.py) [GTFS]
+  dados_pbh/demanda_diaria_linhas.csv    (demanda_pbh.py)         [BHTRANS]
+e dos parâmetros de config.py.
+
+Uso como módulo: montar_instancia(lambda_demanda=..., perfil=...) devolve o
+DataFrame da instância (usado nas análises de demanda e robustez).
+Uso como script: grava instancia_modelo_bhtrans.csv com os valores do config.
+"""
+
+import math
 import sys
 
+import numpy as np
 import pandas as pd
 
-from config import (
-    CAP_ARTICULADO,
-    CUSTO_KM_MEDIO,
-    D_L_RELATORIO,
-    DEMANDA_PBH_LIMITE,
-    DEMANDA_PICO_LINHA,
-    F_MAX,
-    F_MIN,
-    FATOR_TRECHO_CRITICO,
-    FATORES_DEMANDA,
-    FONTE_DEMANDA,
-    LINHAS_CORREDOR,
-    OPERAR_FORA_DO_HORARIO_GTFS,
-    PERFIL_HORARIO,
-    USAR_EXTENSAO_GTFS,
-)
+import config
 
-# 1. Carrega os parâmetros extraídos do GTFS
-df_gtfs = pd.read_csv("parametros_gtfs_extraidos.csv")
 
-# O read_csv lê as linhas como inteiros (51); os dicionários do config usam
-# chaves texto ("51"). Sem esta conversão, nenhum .map() encontra a linha.
-df_gtfs["route_short_name"] = df_gtfs["route_short_name"].astype(str).str.strip()
-
-# Validação: toda linha do corredor precisa ter dados no GTFS e demanda.
-sem_gtfs = sorted(set(LINHAS_CORREDOR) - set(df_gtfs["route_short_name"]))
-sem_demanda = (
-    sorted(set(LINHAS_CORREDOR) - set(DEMANDA_PICO_LINHA))
-    if FONTE_DEMANDA == "hipotese" else []
-)
-faixas_sem_fator = sorted(set(range(24)) - set(FATORES_DEMANDA))
-if sem_gtfs or sem_demanda or faixas_sem_fator:
-    print("ERRO na montagem da instância:")
+def _carregar_gtfs():
+    df_gtfs = pd.read_csv("parametros_gtfs_extraidos.csv")
+    df_gtfs["route_short_name"] = df_gtfs["route_short_name"].astype(str).str.strip()
+    sem_gtfs = sorted(set(config.LINHAS_CORREDOR) - set(df_gtfs["route_short_name"]))
     if sem_gtfs:
-        print(f"  Linhas sem dados no GTFS: {sem_gtfs}")
-    if sem_demanda:
-        print(f"  Linhas sem DEMANDA_PICO_LINHA no config.py: {sem_demanda}")
-    if faixas_sem_fator:
-        print(f"  Horas sem FATORES_DEMANDA no config.py: {faixas_sem_fator}")
-    sys.exit(1)
-
-# 2. Grade completa: todas as linhas x 24 faixas horárias.
-# Faixas sem viagem no GTFS não são descartadas (a demanda delas existe);
-# o tratamento depende de OPERAR_FORA_DO_HORARIO_GTFS (ver config.py).
-grade = pd.MultiIndex.from_product(
-    [LINHAS_CORREDOR, range(24)], names=["route_short_name", "faixa_horaria"]
-).to_frame(index=False)
-
-df = grade.merge(df_gtfs, on=["route_short_name", "faixa_horaria"], how="left")
-df["opera_no_gtfs"] = df["tempo_ciclo_horas"].notna().astype(int)
-
-# Faixas sem viagem no GTFS recebem a extensão e o ciclo médios da linha,
-# ponderados pelo número de viagens de cada faixa.
-def media_ponderada(g, coluna):
-    return (g[coluna] * g["viagens_gtfs"]).sum() / g["viagens_gtfs"].sum()
+        raise SystemExit(f"ERRO: linhas sem dados no GTFS: {sem_gtfs}")
+    return df_gtfs
 
 
-por_linha = pd.DataFrame(
-    {
-        "extensao_linha": df_gtfs.groupby("route_short_name").apply(
-            media_ponderada, "extensao_km", include_groups=False
-        ),
-        "ciclo_medio": df_gtfs.groupby("route_short_name").apply(
-            media_ponderada, "tempo_ciclo_horas", include_groups=False
-        ),
-    }
-).reset_index()
-df = df.merge(por_linha, on="route_short_name", how="left")
-df["extensao_km"] = df["extensao_km"].fillna(df["extensao_linha"].round(3))
-df["tempo_ciclo_horas"] = df["tempo_ciclo_horas"].fillna(df["ciclo_medio"].round(2))
-
-# 3. Custo por viagem e capacidade (parâmetros em config.py)
-# c_l = D_l x Custo/km. D_l é a extensão ida + volta da variante principal
-# de cada linha (GTFS) ou o valor único do relatório, conforme config.
-if USAR_EXTENSAO_GTFS:
-    df["c_lt"] = (df["extensao_km"] * CUSTO_KM_MEDIO).round(2)
-else:
-    df["c_lt"] = round(D_L_RELATORIO * CUSTO_KM_MEDIO, 2)
-
-# C_l: veículo articulado padronizado em todas as linhas (relatório).
-df["capacidade_C"] = CAP_ARTICULADO
-
-# 4. Demanda d_lt (passageiros/hora no trecho crítico)
-if FONTE_DEMANDA == "hipotese":
-    # Versão anterior: pico hipotético por linha x perfil horário típico.
-    df["d_lt"] = (
-        df["route_short_name"].map(DEMANDA_PICO_LINHA)
-        * df["faixa_horaria"].map(FATORES_DEMANDA)
-    ).astype(int)
-elif FONTE_DEMANDA == "pbh":
-    # Demanda diária real (BHTRANS, dia útil) distribuída pelas 24 horas.
+def demanda_diaria(lambda_demanda=None):
+    """Demanda diária por linha (pas/dia útil): inf + λ (sup - inf)."""
+    lam = config.LAMBDA_DEMANDA if lambda_demanda is None else lambda_demanda
+    if config.FONTE_DEMANDA == "hipotese":
+        return pd.Series({l: config.DEMANDA_PICO_LINHA[l] * sum(config.FATORES_DEMANDA.values())
+                          for l in config.LINHAS_CORREDOR})
     try:
         dem = pd.read_csv("dados_pbh/demanda_diaria_linhas.csv", dtype={"linha": str})
     except FileNotFoundError:
-        print("ERRO: rode antes 'python demanda_pbh.py' (gera dados_pbh/demanda_diaria_linhas.csv).")
-        sys.exit(1)
-    coluna = f"demanda_dia_util_{DEMANDA_PBH_LIMITE}"
-    diaria = dem.set_index("linha")[coluna]
-    faltam = sorted(set(LINHAS_CORREDOR) - set(diaria.index))
+        raise SystemExit("ERRO: rode antes 'python demanda_pbh.py'.")
+    dem = dem.set_index("linha")
+    faltam = sorted(set(config.LINHAS_CORREDOR) - set(dem.index))
     if faltam:
-        print(f"ERRO: linhas sem demanda em demanda_diaria_linhas.csv: {faltam}")
-        sys.exit(1)
+        raise SystemExit(f"ERRO: linhas sem demanda em demanda_diaria_linhas.csv: {faltam}")
+    inf, sup = dem["demanda_dia_util_inferior"], dem["demanda_dia_util_superior"]
+    return (inf + lam * (sup - inf)).reindex(config.LINHAS_CORREDOR)
 
-    if PERFIL_HORARIO == "gtfs":
-        # Proporcional às viagens programadas em cada hora (dia útil).
-        peso = df["viagens_gtfs"].fillna(0)
-    elif PERFIL_HORARIO == "tipico":
-        peso = df["faixa_horaria"].map(FATORES_DEMANDA)
+
+def _arredondar_mantendo_soma(valores, total):
+    """Arredondamento pelo maior resto: inteiros que somam exatamente `total`."""
+    base = np.floor(valores).astype(int)
+    falta = int(round(total)) - base.sum()
+    if falta > 0:
+        ordem = np.argsort(-(valores - base))[:falta]
+        base[ordem] += 1
+    return base
+
+
+def f_min_padrao(hora, opera):
+    """f_min pelo intervalo máximo entre ônibus (padrão de serviço)."""
+    if not opera:
+        return 0
+    if hora in config.HORAS_PICO:
+        periodo = "pico"
+    elif hora in config.HORAS_DIA:
+        periodo = "dia"
     else:
-        raise ValueError(f"PERFIL_HORARIO inválido: {PERFIL_HORARIO}")
-    participacao = peso / peso.groupby(df["route_short_name"]).transform("sum")
+        periodo = "noite"
+    return math.ceil(60 / config.INTERVALO_MAX_MIN[periodo])
 
-    df["d_lt"] = (
-        df["route_short_name"].map(diaria) * participacao * FATOR_TRECHO_CRITICO
-    ).round().astype(int)
-else:
-    raise ValueError(f"FONTE_DEMANDA inválida: {FONTE_DEMANDA}")
 
-# 5. Limites de frequência
-# Faixas com viagem no GTFS: mínimo contratual F_MIN.
-# Faixas sem viagem: o modelo pode criar serviço (f_min = 0) ou não (f = 0).
-df["f_min"] = F_MIN * df["opera_no_gtfs"]
-df["f_max"] = F_MAX if OPERAR_FORA_DO_HORARIO_GTFS else F_MAX * df["opera_no_gtfs"]
+def montar_instancia(lambda_demanda=None, perfil=None):
+    perfil = config.PERFIL_HORARIO if perfil is None else perfil
+    df_gtfs = _carregar_gtfs()
 
-# 6. Exporta a instância consolidada
-colunas_instancia = [
-    "route_short_name",
-    "faixa_horaria",
-    "opera_no_gtfs",
-    "extensao_km",
-    "tempo_ciclo_horas",
-    "capacidade_C",
-    "c_lt",
-    "d_lt",
-    "f_min",
-    "f_max",
-]
+    # Grade completa: todas as linhas x 24 faixas horárias
+    grade = pd.MultiIndex.from_product(
+        [config.LINHAS_CORREDOR, range(24)], names=["route_short_name", "faixa_horaria"]
+    ).to_frame(index=False)
+    df = grade.merge(df_gtfs, on=["route_short_name", "faixa_horaria"], how="left")
+    df["opera_no_gtfs"] = df["tempo_ciclo_horas"].notna().astype(int)
+    df["viagens_gtfs"] = df["viagens_gtfs"].fillna(0).astype(int)
 
-instancia_final = df[colunas_instancia].sort_values(["route_short_name", "faixa_horaria"])
-instancia_final.to_csv("instancia_modelo_bhtrans.csv", index=False)
+    # Faixas sem viagem no GTFS: extensão e ciclo médios da linha (ponderados)
+    def media_pond(g, col):
+        return (g[col] * g["viagens_gtfs"]).sum() / g["viagens_gtfs"].sum()
 
-fora = instancia_final[instancia_final["opera_no_gtfs"] == 0]
-print("=== INSTÂNCIA CONSOLIDADA DO MODELO COM SUCESSO ===")
-print(instancia_final.head(15).to_string(index=False))
-print(
-    f"\n{len(fora)} pares (linha, faixa) sem viagem no GTFS, com "
-    f"{fora['d_lt'].sum()} passageiros de demanda "
-    f"({'modelo pode operar' if OPERAR_FORA_DO_HORARIO_GTFS else 'f = 0, demanda não atendida'})."
-)
-print("\nArquivo 'instancia_modelo_bhtrans.csv' gerado!")
+    por_linha = pd.DataFrame({
+        "extensao_linha": df_gtfs.groupby("route_short_name").apply(media_pond, "extensao_km", include_groups=False),
+        "ciclo_medio": df_gtfs.groupby("route_short_name").apply(media_pond, "tempo_ciclo_horas", include_groups=False),
+    }).reset_index()
+    df = df.merge(por_linha, on="route_short_name", how="left")
+    df["extensao_km"] = df["extensao_km"].fillna(df["extensao_linha"].round(3))
+    df["tempo_ciclo_horas"] = df["tempo_ciclo_horas"].fillna(df["ciclo_medio"].round(2))
+    if not config.USAR_EXTENSAO_GTFS:
+        df["extensao_km"] = config.D_L_RELATORIO
+
+    # Demanda: total diário da linha distribuído pelas 24 faixas
+    diaria = demanda_diaria(lambda_demanda) * config.FATOR_TRECHO_CRITICO
+    if perfil == "gtfs":
+        peso = df["viagens_gtfs"].astype(float)
+    elif perfil == "tipico":
+        peso = df["faixa_horaria"].map(config.FATORES_DEMANDA).astype(float)
+    else:
+        raise ValueError(f"Perfil horário inválido: {perfil}")
+    df["d_lt"] = 0
+    for l, idx in df.groupby("route_short_name").groups.items():
+        w = peso.loc[idx].to_numpy()
+        valores = diaria[l] * w / w.sum()
+        df.loc[idx, "d_lt"] = _arredondar_mantendo_soma(valores, diaria[l])
+
+    # Padrão de serviço (f_min) e limite físico por linha (f_max)
+    df["f_min"] = [f_min_padrao(h, o) for h, o in zip(df["faixa_horaria"], df["opera_no_gtfs"])]
+    if config.OPERAR_FORA_DO_HORARIO_GTFS:
+        df["f_max"] = config.F_MAX
+    else:
+        df["f_max"] = config.F_MAX * df["opera_no_gtfs"]
+
+    colunas = ["route_short_name", "faixa_horaria", "opera_no_gtfs", "viagens_gtfs",
+               "extensao_km", "tempo_ciclo_horas", "d_lt", "f_min", "f_max"]
+    return df[colunas].sort_values(["route_short_name", "faixa_horaria"]).reset_index(drop=True)
+
+
+if __name__ == "__main__":
+    from modelo import capacidade_corredor, frota_grade_atual
+
+    inst = montar_instancia()
+    inst.to_csv("instancia_modelo_bhtrans.csv", index=False)
+    print("=== INSTÂNCIA CONSOLIDADA ===")
+    print(inst.head(12).to_string(index=False))
+    print(f"\nλ (posição entre limites de demanda): {config.LAMBDA_DEMANDA}")
+    print(f"Demanda total: {inst['d_lt'].sum():,} pas/dia útil")
+    print("Demanda por linha:", inst.groupby("route_short_name")["d_lt"].sum().to_dict())
+    print(f"Frota exigida pela grade atual (GTFS): {frota_grade_atual(inst)} veículos")
+    print(f"Capacidade do corredor (partidas/h): {capacidade_corredor(inst)}")
+    print("\nArquivo 'instancia_modelo_bhtrans.csv' gerado!")
+    sys.exit(0)

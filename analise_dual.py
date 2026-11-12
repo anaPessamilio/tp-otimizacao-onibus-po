@@ -1,115 +1,96 @@
 """
-Análise de dualidade e pós-otimização do modelo de frequências.
+Dualidade e pós-otimização.
 
-1. Relaxação linear (f contínuo): valor ótimo e gap de integralidade.
-2. Preços-sombra (variáveis duais) da restrição de frota R1 em cada faixa:
-   quanto Z diminui com 1 veículo a mais em operação naquela hora, e o
-   intervalo do lado direito em que esse preço continua válido (ranging).
-3. Duais da restrição de atendimento R2: custo marginal de 1 passageiro a
-   mais em cada (linha, faixa).
-4. Validação no problema inteiro: ΔZ real ao aumentar em 1 o limite de frota
-   de cada faixa (re-otimizando o PLIM), comparado ao preço-sombra do PL.
+Um PLIM não tem variáveis duais; por isso:
+1. Resolve-se a relaxação linear (f contínuo) pelo simplex e extraem-se os
+   duais (preços-sombra), as folgas e os intervalos do lado direito (RHS
+   ranging) das restrições de frota (R1) e de corredor (R3), e os duais de
+   atendimento (R2).
+2. Valida-se cada preço-sombra no problema inteiro: re-otimiza-se o PLIM com
+   +1 veículo (R1) ou +1 partida/h (R3) naquela faixa e mede-se a redução de Z.
 """
 
 import pandas as pd
 from gurobipy import GRB
 
-from config import ALPHA_1, ALPHA_2, FROTA_MAX
+import config
 from modelo import construir_modelo, resolver_modelo
 
-df = pd.read_csv("instancia_modelo_bhtrans.csv")
+df = pd.read_csv("instancia_modelo_bhtrans.csv", dtype={"route_short_name": str})
 
-# ---------------------------------------------------------------- PLIM
-res_mip = resolver_modelo(df, FROTA_MAX, ALPHA_1, ALPHA_2, nome="PLIM")
+res_mip = resolver_modelo(df, nome="PLIM")
 z_mip = res_mip["valor_obj_Z"]
 
-# ---------------------------------------------------------------- relaxação linear
-m = construir_modelo(df, FROTA_MAX, ALPHA_1, ALPHA_2, nome="Relaxacao_PL")
-m["model"].update()  # necessário para os nomes das restrições
+m = construir_modelo(df, config.ALPHA_1, config.ALPHA_2, nome="Relaxacao")
 lp = m["model"].relax()
-lp.update()
 lp.Params.OutputFlag = 0
 lp.optimize()
 if lp.Status != GRB.OPTIMAL:
     raise RuntimeError(f"Relaxação linear sem solução ótima (status {lp.Status})")
 z_lp = lp.ObjVal
 
-# ---------------------------------------------------------------- duais de R1
-linhas_r1 = []
-for t in sorted(m["r1"]):
-    r = lp.getConstrByName(f"Limite_Frota_t{t}")
-    usado = lp.getRow(r).getValue()
-    linhas_r1.append({
-        "faixa_horaria": t,
-        "frota_em_operacao_PL": round(usado, 2),
-        "folga": round(r.Slack, 2),
-        # restrição <= num problema de minimização: Pi <= 0; o preço-sombra
-        # (redução de Z por veículo adicional) é -Pi.
-        "preco_sombra_R$_por_veiculo": round(max(0.0, -r.Pi), 2),
-        "rhs_valido_de": round(r.SARHSLow, 2),
-        "rhs_valido_ate": round(r.SARHSUp, 2) if r.SARHSUp < GRB.INFINITY else None,
-    })
-duais_r1 = pd.DataFrame(linhas_r1)
 
-# ---------------------------------------------------------------- validação inteira (+1 veículo)
-delta_mip = []
-for t in duais_r1["faixa_horaria"]:
-    limite = {s: FROTA_MAX for s in m["r1"]}
-    limite[t] = FROTA_MAX + 1
-    res_t = resolver_modelo(df, limite, ALPHA_1, ALPHA_2, nome=f"PLIM_mais1_t{t}")
-    delta_mip.append(round(z_mip - res_t["valor_obj_Z"], 2))
-duais_r1["reducao_Z_PLIM_+1_veiculo"] = delta_mip
+def linha_dual(constr_lp, rotulo, faixa, delta_mip):
+    usado = lp.getRow(constr_lp).getValue()
+    return {
+        "restricao": rotulo, "faixa_horaria": faixa,
+        "uso_PL": round(usado, 2), "limite": round(constr_lp.RHS, 2),
+        "folga": round(constr_lp.Slack, 2),
+        # restrição <= em minimização: Pi <= 0; preço-sombra = -Pi (redução de Z)
+        "preco_sombra": round(max(0.0, -constr_lp.Pi), 2),
+        "rhs_valido_de": round(constr_lp.SARHSLow, 2),
+        "rhs_valido_ate": round(constr_lp.SARHSUp, 2) if constr_lp.SARHSUp < GRB.INFINITY else None,
+        "reducao_Z_PLIM_+1": delta_mip,
+    }
 
-# ---------------------------------------------------------------- duais de R2
-alpha2 = ALPHA_2
-linhas_r2 = []
-for (l, t) in m["pares"]:
-    r = lp.getConstrByName(f"Atendimento_l{l}_t{t}")
-    pi = r.Pi  # restrição >=: Pi >= 0 = custo marginal de 1 passageiro a mais
-    c_por_pas = m["c"][(l, t)] / m["C"][(l, t)]
-    if m["d"][(l, t)] == 0:
+
+linhas = []
+# R1: +1 veículo do tipo k na faixa t
+for (k, t), c in sorted(m["r1"].items(), key=lambda x: x[0][1]):
+    r = lp.getConstrByName(c.ConstrName)
+    res_t = resolver_modelo(df, frota_extra={(k, t): 1}, nome=f"mais1_{k}_{t}")
+    linhas.append(linha_dual(r, f"Frota ({k})", t, round(z_mip - res_t["valor_obj_Z"], 2)))
+# R3: +1 partida/h no corredor na faixa t
+for t, c in sorted(m["r3"].items()):
+    r = lp.getConstrByName(c.ConstrName)
+    mm = construir_modelo(df, config.ALPHA_1, config.ALPHA_2, nome=f"corredor_{t}")
+    mm["r3"][t].RHS = m["cap"] + 1
+    mm["model"].optimize()
+    linhas.append(linha_dual(r, "Corredor", t, round(z_mip - mm["model"].ObjVal, 2)))
+duais = pd.DataFrame(linhas)
+
+# ---------------------------------------------------------------- R2: regimes
+tipo_ref = next(k for k, v in m["tipos"].items() if v["frota"] > 0)
+regimes = []
+for (l, t), c in m["r2"].items():
+    r = lp.getConstrByName(c.ConstrName)
+    pi = r.Pi  # restrição >=: custo marginal de 1 passageiro a mais em (l, t)
+    w_lp = lp.getVarByName(m["w"][l, t].VarName).X
+    c_por_lugar = m["c"][(l, t, tipo_ref)] / m["tipos"][tipo_ref]["capacidade"]
+    if m["d"][(l, t)] == 0 and abs(pi) < 1e-9:
         regime = "sem demanda"
-    elif abs(pi - alpha2) < 1e-6:
-        regime = "passageiro excedente não atendido (= α2)"
-    elif abs(pi - c_por_pas) < 1e-6:
-        regime = "atendido; frota com folga (= c/C)"
-    elif pi > c_por_pas + 1e-6:
-        regime = "atendido; frota no limite (> c/C)"
+    elif w_lp > 1e-6:
+        regime = "fila: passageiros esperando"
+    elif abs(pi - c_por_lugar) < 1e-4:
+        regime = "= c/C: frota com folga"
+    elif pi > c_por_lugar:
+        regime = "> c/C: frota ou corredor no limite"
     else:
-        regime = "outro (limites de f)"
-    linhas_r2.append({
-        "linha": l, "faixa_horaria": t, "demanda": m["d"][(l, t)],
-        "dual_R$_por_passageiro": round(pi, 3),
-        "custo_viagem_por_lugar": round(c_por_pas, 3),
-        "regime": regime,
-    })
-duais_r2 = pd.DataFrame(linhas_r2)
+        regime = "< c/C: capacidade sobra (padrão de serviço)"
+    regimes.append({"linha": l, "faixa_horaria": t, "demanda": m["d"][(l, t)],
+                    "dual_R2": round(pi, 3), "c_por_lugar": round(c_por_lugar, 3),
+                    "regime": regime})
+duais_r2 = pd.DataFrame(regimes)
 
-duais_r1.to_csv("analise_dual_frota.csv", index=False)
+duais.to_csv("analise_dual_frota.csv", index=False)
 duais_r2.to_csv("analise_dual_atendimento.csv", index=False)
 
-# ---------------------------------------------------------------- relatório
 print("=== DUALIDADE E PÓS-OTIMIZAÇÃO ===")
-print(f"Z do PLIM (inteiro):        R$ {z_mip:,.2f}")
-print(f"Z da relaxação linear (PL): R$ {z_lp:,.2f}")
-print(f"Gap de integralidade:       {100 * (z_mip - z_lp) / z_mip:.2f}%")
-
-print("\n--- R1: preço-sombra da frota por faixa horária ---")
-print("(redução de Z, em R$, com 1 veículo a mais em operação na faixa)")
-print(duais_r1.to_string(index=False))
-
-ativas = duais_r1[duais_r1["preco_sombra_R$_por_veiculo"] > 1e-6]
-print(f"\nFaixas com frota no limite (preço-sombra > 0): {ativas['faixa_horaria'].tolist()}")
-if not ativas.empty:
-    top = ativas.sort_values("preco_sombra_R$_por_veiculo", ascending=False).iloc[0]
-    print(
-        f"Maior valor marginal: {int(top.faixa_horaria)}h, "
-        f"R$ {top['preco_sombra_R$_por_veiculo']:,.2f} por veículo "
-        f"(válido para limite entre {top.rhs_valido_de} e {top.rhs_valido_ate})."
-    )
-
-print("\n--- R2: regime dos duais de atendimento ---")
+print(f"Z do PLIM: R$ {z_mip:,.2f} | Z da relaxação linear: R$ {z_lp:,.2f} | "
+      f"gap de integralidade: {100 * (z_mip - z_lp) / z_mip:.2f}%")
+ativos = duais[(duais.preco_sombra > 1e-6) | (duais["reducao_Z_PLIM_+1"] > 1e-6)]
+print("\nRestrições com valor marginal positivo (PL ou PLIM):")
+print(ativos.to_string(index=False))
+print("\nRegimes dos duais de atendimento (R2):")
 print(duais_r2["regime"].value_counts().to_string())
-print(
-    "\nArquivos gerados: 'analise_dual_frota.csv' e 'analise_dual_atendimento.csv'."
-)
+print("\nArquivos: 'analise_dual_frota.csv' e 'analise_dual_atendimento.csv'.")

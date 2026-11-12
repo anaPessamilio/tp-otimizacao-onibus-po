@@ -1,0 +1,24 @@
+Gurobi Optimizer version 13.0.3 build v13.0.3rc0 (win64 - Windows 11+.0 (26200.2))
+Optimize a model with 393 rows, 360 columns and 1549 nonzeros (Min)
+Variable types: 120 continuous, 240 integer (0 binary)
+Presolved: 138 rows, 204 columns, 675 nonzeros
+Variable types: 0 continuous, 204 integer (0 binary)
+Root relaxation: objective 2.881953e+05, 6 iterations, 0.01 seconds (0.00 work units)
+Cutting planes:
+  Gomory: 31
+  MIR: 55
+Explored 1 nodes (120 simplex iterations) in 0.23 seconds (0.02 work units)
+Optimal solution found (tolerance 1.00e-04)
+Best objective 3.085177500000e+05, best bound 3.085147721750e+05, gap 0.0010%
+Gurobi Optimizer version 13.0.3 build v13.0.3rc0 (win64 - Windows 11+.0 (26200.2))
+Optimize a model with 393 rows, 360 columns and 1549 nonzeros (Min)
+Variable types: 120 continuous, 240 integer (0 binary)
+Presolved: 138 rows, 204 columns, 675 nonzeros
+Variable types: 0 continuous, 204 integer (0 binary)
+Root relaxation: objective 2.881953e+05, 6 iterations, 0.01 seconds (0.00 work units)
+Cutting planes:
+  Gomory: 31
+  MIR: 55
+Explored 1 nodes (120 simplex iterations) in 0.29 seconds (0.02 work units)
+Optimal solution found (tolerance 1.00e-04)
+Best objective 3.085177500000e+05, best bound 3.085147721750e+05, gap 0.0010%
