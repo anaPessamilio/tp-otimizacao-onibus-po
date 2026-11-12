@@ -1,0 +1,230 @@
+% =====================================================================
+% Slides do Seminário 2 (12 min + 5 min de arguição)
+% Compilar no Overleaf com pdfLaTeX (arquivo principal: slides.tex)
+% Números e tabelas vêm de tabelas/*.tex (gerados pelo código).
+% =====================================================================
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+
+\graphicspath{{figuras/}}
+\input{tabelas/numeros.tex}
+
+% ---------------------------------------------------------------- visual
+\definecolor{azul}{HTML}{2A78D6}
+\definecolor{marinho}{HTML}{0F172A}
+\definecolor{laranja}{HTML}{EB6834}
+\definecolor{cinza}{HTML}{52514E}
+\usetheme{default}
+\setbeamercolor{frametitle}{fg=marinho}
+\setbeamercolor{title}{fg=marinho}
+\setbeamercolor{structure}{fg=azul}
+\setbeamercolor{normal text}{fg=black}
+\setbeamerfont{frametitle}{series=\bfseries,size=\Large}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{footline}{%
+  \hfill{\color{cinza}\scriptsize MOVE Antônio Carlos -- Pesquisa Operacional / UFMG \quad \insertframenumber/\inserttotalframenumber}\hspace{1em}\vspace{0.6em}}
+\newcommand{\destaque}[1]{{\color{azul}\textbf{#1}}}
+
+\title{Otimização de Frequências das Linhas Troncais do MOVE\\no Corredor Antônio Carlos}
+\subtitle{Programação Linear Inteira Mista com Gurobi}
+\author{Nome 1 \and Nome 2 \and Nome 3} % <- preencher
+\institute{Pesquisa Operacional -- DEE/EE/UFMG}
+\date{Seminário 2 -- 25/11/2026}
+
+\begin{document}
+
+% ---------------------------------------------------------------- 1
+\begin{frame}
+\titlepage
+\end{frame}
+
+% ---------------------------------------------------------------- 2
+\begin{frame}{O problema}
+\begin{columns}[T]
+\column{0.55\textwidth}
+\begin{itemize}
+\item Corredor MOVE Av.~Antônio Carlos / Pedro~I: 5 linhas troncais (51, 52, 63, 64, 67)
+\item \destaque{Decisão:} quantas viagens por hora cada linha faz num dia útil
+\item \destaque{Trade-off:} custo da operação $\times$ passageiros deixados no ponto
+\item \destaque{Recurso escasso:} frota de \frotaMax{} ônibus
+\end{itemize}
+\column{0.42\textwidth}
+\begin{block}{Por que é difícil?}
+Um ônibus que sai às 7h só volta 1--2\,h depois: ele ``ocupa'' várias faixas horárias.
+As linhas disputam a mesma frota.
+\end{block}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 3
+\begin{frame}{Modelo: PLIM bi-objetivo ponderado}
+\small
+\begin{align*}
+\min\; Z = {}& \alpha_1 \textstyle\sum_{l,t} c_{lt} f_{lt} + \alpha_2 \sum_{l,t} w_{lt}\\
+\text{(R1)}\quad & \textstyle\sum_{l}\sum_{k\ge0} \omega(k, n_{l,t-k})\, f_{l,t-k} \le F \qquad \forall t \quad \text{(frota em operação)}\\
+\text{(R2)}\quad & C_l f_{lt} + w_{lt} \ge d_{lt} \qquad \forall l,t \quad \text{(atendimento)}\\
+& f_{lt}\in\mathbb{Z}_{\ge0},\ f^{\min}\le f_{lt}\le f^{\max},\quad w_{lt}\ge 0
+\end{align*}
+\begin{itemize}
+\item $f_{lt}$: viagens/hora (inteira) \quad $w_{lt}$: passageiros não atendidos
+\item $\omega(k,n)$: fração da faixa $s+k$ em que um ônibus que saiu em $s$ ainda está rodando
+\item $\sum_k \omega(k,n)=n$ $\Rightarrow$ frota = frequência $\times$ ciclo (Ceder, 2016)
+\item \nVarInt{} variáveis inteiras, \nVarInt{} contínuas, \nRestr{} restrições
+\end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 4
+\begin{frame}{Dados reais: GTFS e BHTRANS}
+\begin{columns}[T]
+\column{0.48\textwidth}
+\textbf{Oferta -- GTFS da BHTRANS}
+\begin{itemize}\small
+\item Dias úteis, todas as variantes regulares
+\item Extensão (geometria, UTM 23S) e tempo de ciclo
+\item Viagens circulares: duração já é ida+volta
+\item Custo: R\$~\custoKm/km; articulado de 130 lugares
+\end{itemize}
+\column{0.48\textwidth}
+\textbf{Demanda -- relatório mensal BHTRANS}
+\begin{itemize}\small
+\item Média de dias úteis, mar--ago/2026
+\item Estações registram \embarquesEstacoes{} embarques/dia, não a troncal
+\item Rateio pelas viagens programadas
+\item Dois limites: \demandaSup{} (sup.) e \demandaInfDados{} (inf.) pas/dia
+\end{itemize}
+\end{columns}
+\vspace{0.6em}
+\centering\scriptsize
+\input{tabelas/parametros_linhas.tex}
+\end{frame}
+
+% ---------------------------------------------------------------- 5
+\begin{frame}{Método de solução: Gurobi (branch-and-cut)}
+\begin{columns}[T]
+\column{0.55\textwidth}
+\begin{enumerate}\small
+\item Presolve
+\item Relaxação linear pelo \destaque{simplex} $\to$ limite inferior
+\item \destaque{Planos de corte} (Gomory, MIR)
+\item Heurísticas $\to$ limite superior
+\item \destaque{Branch-and-bound} se houver $f$ fracionário
+\item Para com gap $< 0{,}01\%$
+\end{enumerate}
+\column{0.42\textwidth}
+\begin{block}{Nesta instância}
+\small Gurobi \versaoGurobi{}: ótimo no \destaque{nó raiz}, sem ramificação, em menos de 1\,s.
+Os cortes fecharam o gap de \gapInt\% da relaxação linear.
+\end{block}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 6
+\begin{frame}{Resultado: a frota é o gargalo no início dos picos}
+\begin{columns}[c]
+\column{0.6\textwidth}
+\includegraphics[width=\textwidth]{frota_deficit_por_hora.pdf}
+\column{0.38\textwidth}
+\small
+\begin{itemize}
+\item $Z=$ R\$~\Zotimo
+\item Custo: R\$~\custoTotal/dia
+\item \destaque{\pctNaoAtendidos\%} não atendidos (\naoAtendidos{} pas.)
+\item Frota no limite às \horasFrotaLimite
+\item Déficit no \emph{início} dos picos: ônibus do pico ainda rodando na hora seguinte
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 7
+\begin{frame}{Por linha: quem perde frota no pico?}
+\begin{columns}[c]
+\column{0.5\textwidth}
+\includegraphics[width=\textwidth,height=0.78\textheight,keepaspectratio]{demanda_capacidade_linhas.pdf}
+\column{0.48\textwidth}
+\small
+\begin{itemize}
+\item Fora do pico: capacidade acompanha a demanda
+\item No pico: frota vai para linhas de \destaque{ciclo curto} (51, 52)
+\item Linha 64 (ciclo mais longo) é cortada às 6h e 16h
+\item Eficiente no agregado, mas \destaque{concentra o déficit} $\to$ questão de equidade
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 8
+\begin{frame}{Cenários: articular a frota vale mais que ampliá-la}
+\includegraphics[width=0.62\textwidth]{cenarios.pdf}\hfill
+\begin{minipage}[b]{0.34\textwidth}\small
+\begin{itemize}
+\item Articulado: 130 lugares, R\$~12,50/km
+\item Padron: 85 lugares, R\$~9,50/km
+\item 100\% articulado deixa menos gente no ponto que +20 ônibus Padron, e custa menos
+\end{itemize}
+\end{minipage}
+\vspace{0.4em}
+
+\small Limite inferior de demanda: \pctNaoAtendidosInf\% não atendidos, frota máxima de \frotaMaxInf{} ônibus.
+\end{frame}
+
+% ---------------------------------------------------------------- 9
+\begin{frame}{Sensibilidade do peso $\alpha_2$}
+\centering
+\includegraphics[width=0.8\textwidth]{sensibilidade_alpha2.pdf}
+\begin{itemize}\small
+\item Abaixo de $c/C \approx$ R\$~1,5--3,6: mais barato deixar o passageiro no ponto
+\item Acima de R\$~10: ganho marginal, quem limita é a frota $\Rightarrow$ $\alpha_2=\alfaDois$ é estável
+\end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 10
+\begin{frame}{Dualidade: quanto vale um ônibus a mais?}
+\begin{columns}[c]
+\column{0.55\textwidth}
+\includegraphics[width=\textwidth]{precos_sombra_frota.pdf}
+\column{0.43\textwidth}
+\small
+\begin{itemize}
+\item Preço-sombra de R1 (relaxação linear)
+\item Só $>0$ com frota no limite (\destaque{folgas complementares})
+\item Maior valor: \horaPrecoMax{}, R\$~\precoSombraMax/veículo
+\item PLIM confirma, com ganhos menores (integralidade)
+\item 16h: dual nulo no PL, mas ganho no PLIM (arredondamento)
+\end{itemize}
+\end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 11
+\begin{frame}{Limitações}
+\begin{itemize}
+\item Demanda = \destaque{embarques registrados}, não carga no trecho crítico (fator 1,0, conservador)
+\item Transferências vindas das alimentadoras não aparecem na troncal
+\item Rateio das estações entre linhas é hipótese $\Rightarrow$ dois limites
+\item Perfil horário segue a oferta programada (GTFS)
+\item Sem restrição de equidade entre linhas
+\end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 12
+\begin{frame}{Conclusões}
+\begin{itemize}
+\item PLIM com \destaque{frota acumulada}, resolvido de forma exata pelo Gurobi em $<1$\,s
+\item Instância com dados oficiais (GTFS + BHTRANS)
+\item Gargalo: frota no \destaque{início dos picos}
+\item Articular a frota $>$ ampliar a frota de Padron
+\item Veículo extra mais valioso: pico da manhã (\horaPrecoMax)
+\end{itemize}
+\vspace{0.8em}
+\textbf{Trabalhos futuros:} carga no trecho crítico e contagens horárias, equidade entre linhas, projeto conjunto de linhas e frequências.
+\vspace{1em}
+\begin{center}\Large\color{marinho}\textbf{Obrigado! Perguntas?}\end{center}
+\end{frame}
+
+\end{document}
