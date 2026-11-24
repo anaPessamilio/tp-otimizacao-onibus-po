@@ -1,0 +1,9 @@
+# Python 3.13 (testado com 3.13.12)
+gurobipy==13.0.3
+pandas==3.0.3
+numpy==2.4.4
+geopandas==1.2.0
+shapely==2.2.0
+pdfplumber==0.11.10
+requests==2.34.2
+matplotlib==3.10.9
