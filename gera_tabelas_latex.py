@@ -68,6 +68,9 @@ rob = pd.read_csv("analise_robustez.csv")
 val = pd.read_csv("validacao_grade_linhas.csv", dtype={"linha": str})
 comp = pd.read_csv("validacao_comparacao.csv")
 par = pd.read_csv("fronteira_pareto.csv")
+mo = pd.read_csv("comparacao_mesmo_orcamento.csv")
+mo_lin = pd.read_csv("comparacao_mesmo_orcamento_linhas.csv", dtype={"linha": str})
+mo_fmin = pd.read_csv("comparacao_mesmo_orcamento_fmin_ajustado.csv", dtype={"route_short_name": str})
 log = Path("log_gurobi.txt").read_text(encoding="utf-8", errors="ignore")
 
 ART, PAD = config.TIPOS_VEICULO["articulado"], config.TIPOS_VEICULO["padron"]
@@ -143,6 +146,49 @@ t = val.sum(numeric_only=True)
 total = ["Total", br(t.viagens_gtfs, 0), br(t.viagens_otimo, 0), br(t.soma_ceil_d_C, 0), "",
          br(t.perdidos_gtfs, 0), br(t.perdidos_otimo, 0)]
 escrever("validacao_linhas.tex", tabular("lrrrrrr", linhas, total))
+
+# ------------------------------------------------------------------ mesmo orçamento da grade atual
+def ind_mo(v, modo):
+    return f"{br(v, 2)}\\%" if modo == "perda" else f"{br(v, 2)} min"
+
+
+def red_mo(v):
+    return "--" if pd.isna(v) else f"{br(max(0.0, v), 0)}\\%"
+
+
+NOME_PERFIL = {"gtfs": "GTFS (base)", "tipico": "típico"}
+NOME_VAR = {"mesmo orçamento": "livre", "mesmo orçamento e viagens/linha": "viagens/linha fixas"}
+mo_cal = mo[(mo["lambda"] - LAM).abs() < 1e-6]
+linhas = [["Perfil horário", "Modo", "Realocação", "Grade atual", "Ótimo", "Redução"]]
+seps, i = [], 0
+for perfil in ["gtfs", "tipico"]:
+    for modo in ["perda", "espera"]:
+        for var in ["mesmo orçamento", "mesmo orçamento e viagens/linha"]:
+            r = mo_cal[(mo_cal.perfil == perfil) & (mo_cal.modo == modo) & (mo_cal.variante == var)].iloc[0]
+            i += 1
+            linhas.append([NOME_PERFIL[perfil], "perda" if modo == "perda" else "fila", NOME_VAR[var],
+                           ind_mo(r.indicador_gtfs, modo), ind_mo(r.indicador_otimo, modo),
+                           red_mo(r.reducao_pct)])
+    seps.append(i + 1)
+escrever("mesmo_orcamento.tex", tabular("lllrrr", linhas, separadores=tuple(seps[:-1])))
+
+mo_lam = mo[(mo.perfil == "gtfs") & (mo.modo == "perda") & (mo.variante == "mesmo orçamento")]
+linhas = [[r"$\lambda$", "Perdidos: grade atual", "Perdidos: ótimo", "Redução",
+           r"Custo do ótimo (R\$)", "Viagens do ótimo"]]
+for _, r in mo_lam.iterrows():
+    linhas.append([br(r["lambda"], 3), ind_mo(r.indicador_gtfs, "perda"), ind_mo(r.indicador_otimo, "perda"),
+                   red_mo(r.reducao_pct), br(r.custo_otimo, 0), br(r.viagens_otimo, 0)])
+escrever("mesmo_orcamento_lambda.tex", tabular("rrrrrr", linhas))
+
+linhas = [["Linha", "Viagens GTFS", "Viagens ótimo", "Perdidos GTFS", "Perdidos ótimo",
+           r"Custo GTFS (R\$)", r"Custo ótimo (R\$)"]]
+for _, r in mo_lin.iterrows():
+    linhas.append([r.linha, br(r.viagens_gtfs, 0), br(r.viagens_otimo, 0), br(r.perdidos_gtfs, 0),
+                   br(r.perdidos_otimo, 0), br(r.custo_gtfs, 0), br(r.custo_otimo, 0)])
+t = mo_lin.sum(numeric_only=True)
+escrever("mesmo_orcamento_linhas.tex", tabular("lrrrrrr", linhas, [
+    "Total", br(t.viagens_gtfs, 0), br(t.viagens_otimo, 0), br(t.perdidos_gtfs, 0),
+    br(t.perdidos_otimo, 0), br(t.custo_gtfs, 0), br(t.custo_otimo, 0)]))
 
 # ------------------------------------------------------------------ resultados por linha
 g = res.groupby("linha").agg(v=("frequencia_otima", "sum"), vg=("viagens_gtfs", "sum"),
@@ -303,6 +349,48 @@ numeros = {
     "demandaInf": br(dem_pbh.demanda_dia_util_inferior.sum(), 0),
     "tempoLimite": str(config.TEMPO_LIMITE_S),
 }
+
+
+# comparação a orçamento igual (λ calibrado)
+def mo_val(perfil, modo, variante, col, lam_=None):
+    d = mo[(mo.perfil == perfil) & (mo.modo == modo) & (mo.variante == variante)]
+    d = d.iloc[(d["lambda"] - (LAM if lam_ is None else lam_)).abs().argmin()]
+    return d[col]
+
+
+LIVRE, FIXA = "mesmo orçamento", "mesmo orçamento e viagens/linha"
+sem_ganho = mo_lam[(mo_lam.reducao_pct.fillna(0) < 0.05) & (mo_lam["lambda"] > LAM)]["lambda"]
+f0 = mo_fmin.iloc[0] if len(mo_fmin) else None
+numeros.update({
+    "moPerdidosGTFS": br(mo_val("gtfs", "perda", LIVRE, "nao_atendidos_gtfs"), 0),
+    "moPerdidosOtimo": br(mo_val("gtfs", "perda", LIVRE, "nao_atendidos_otimo"), 0),
+    "moPctGTFS": br(mo_val("gtfs", "perda", LIVRE, "indicador_gtfs"), 2),
+    "moPctOtimo": br(mo_val("gtfs", "perda", LIVRE, "indicador_otimo"), 2),
+    "moReducaoPerda": br(mo_val("gtfs", "perda", LIVRE, "reducao_pct"), 0),
+    "moCustoOtimo": br(mo_val("gtfs", "perda", LIVRE, "custo_otimo"), 0),
+    "moViagensOtimo": br(mo_val("gtfs", "perda", LIVRE, "viagens_otimo"), 0),
+    "moReducaoPerdaFixa": br(max(0.0, mo_val("gtfs", "perda", FIXA, "reducao_pct")), 0),
+    "moEsperaGTFS": br(mo_val("gtfs", "espera", LIVRE, "indicador_gtfs"), 1),
+    "moEsperaOtimo": br(mo_val("gtfs", "espera", LIVRE, "indicador_otimo"), 1),
+    "moEsperaOtimoFixa": br(mo_val("gtfs", "espera", FIXA, "indicador_otimo"), 1),
+    "moReducaoTipico": br(mo_val("tipico", "perda", LIVRE, "reducao_pct"), 0),
+    "moReducaoTipicoFixa": br(mo_val("tipico", "perda", FIXA, "reducao_pct"), 0),
+    "moPctGTFSTipico": br(mo_val("tipico", "perda", LIVRE, "indicador_gtfs"), 2),
+    "moPctTipicoFixa": br(mo_val("tipico", "perda", FIXA, "indicador_otimo"), 2),
+    "moReducaoQuarto": br(mo_val("gtfs", "perda", LIVRE, "reducao_pct", 0.25), 0),
+    "moCustoLambdaZero": br(mo_val("gtfs", "perda", LIVRE, "custo_otimo", 0.0), 0),
+    "moEconomiaLambdaZero": br(100 * (1 - mo_val("gtfs", "perda", LIVRE, "custo_otimo", 0.0)
+                                      / mo_val("gtfs", "perda", LIVRE, "custo_gtfs", 0.0)), 1),
+    "moLambdaSemGanho": br(sem_ganho.min(), 2) if len(sem_ganho) else "--",
+    "fminAjusteLinha": str(f0.route_short_name) if f0 is not None else "--",
+    "fminAjusteHora": f"{int(f0.faixa_horaria)}h" if f0 is not None else "--",
+    "fminAjusteGTFS": str(int(f0.viagens_gtfs)) if f0 is not None else "--",
+    "fminAjusteMin": str(int(f0.f_min)) if f0 is not None else "--",
+    "nFminAjustados": str(len(mo_fmin)),
+    "gapMaxCenarios": br(cen.loc[~cen.otimo_provado, "gap_pct"].max(), 2)
+                      if (~cen.otimo_provado).any() else "0",
+})
+
 nl = re.search(r"Optimize a model with (\d+) rows", log)
 numeros["nRestr"] = nl.group(1) if nl else "?"
 linhas_tex = ["% Gerado por gera_tabelas_latex.py -- não editar à mão"]

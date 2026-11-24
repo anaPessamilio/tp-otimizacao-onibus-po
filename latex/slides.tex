@@ -138,14 +138,15 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \end{frame}
 
 % ---------------------------------------------------------------- 7
-\begin{frame}{Validação: grade atual $\times$ ótimo, no mesmo modo}
+\begin{frame}{Grade atual $\times$ ótimo com o \emph{mesmo} orçamento}
 \centering
-\resizebox{0.95\linewidth}{!}{\input{tabelas/validacao_comparacao.tex}}
-\vspace{0.6em}
+\resizebox{0.8\linewidth}{!}{\input{tabelas/mesmo_orcamento.tex}}
+\vspace{0.4em}
 \begin{itemize}\small
-\item Ótimo: \destaque{mais serviço por mais custo} (+\variacaoCusto\% de custo, +\variacaoViagens\% de viagens)
-\item Total por linha $\approx \sum_t\lceil d/C\rceil$: segue a \destaque{regra de rateio}, não é validação independente
-\item O ganho do modelo está na \destaque{distribuição horária} e no acoplamento pela frota
+\item Mesmo custo, frota e nº máximo de viagens: perdidos de \moPctGTFS\% $\rightarrow$ \destaque{\moPctOtimo\%} ($-$\moReducaoPerda\%)
+\item \destaque{Mas}: com as viagens de cada linha fixas, ganho de \moReducaoPerdaFixa\% $\Rightarrow$ tudo vem de passar viagens da 52/63 para 51/64/67, ou seja, do \destaque{rateio}
+\item Perfil horário independente da grade: só redistribuir no tempo já dá $-$\moReducaoTipicoFixa\%
+\item Fila: a espera da grade atual se acumula o dia todo (artefato) $\Rightarrow$ só como referência
 \end{itemize}
 \end{frame}
 
@@ -196,14 +197,15 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \textbf{Limitações}
 \begin{itemize}\small
 \item Demanda = embarques rateados, não carga medida
-\item Diferença entre linhas vem do rateio
+\item Diferença entre linhas e perfil horário vêm da própria grade atual
 \item Padron sem custo fixo; custos/km hipotéticos
 \end{itemize}
 \column{0.48\textwidth}
 \textbf{Conclusões}
 \begin{itemize}\small
 \item PLIM exato em $<1$\,s com frota acumulada, fila, corredor e tipos de veículo
-\item Demanda calibrada: mais serviço por +\variacaoCusto\% de custo
+\item Mesmo orçamento: $-$\moReducaoPerda\% de perdidos, mas pela realocação entre linhas, que depende do rateio: \destaque{não prova} que a grade atual é ineficiente
+\item Sem ganho para $\lambda\gtrsim\moLambdaSemGanho$ (frota saturada); em $\lambda=0$, mesmo serviço $-$\moEconomiaLambdaZero\% de custo
 \item Escassez de frota no pico da manhã só para $\lambda\gtrsim\lambdaGargalo$
 \item Frota extra: articulado rende mais por veículo, salvo se o Padron for bem mais barato
 \end{itemize}
@@ -227,6 +229,17 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \end{itemize}
 \end{frame}
 
+\begin{frame}{Apoio: ótimo com orçamento livre e ganho por nível de demanda}
+\centering
+\resizebox{0.9\linewidth}{!}{\input{tabelas/validacao_comparacao.tex}}
+\vspace{0.6em}
+
+\resizebox{0.8\linewidth}{!}{\input{tabelas/mesmo_orcamento_lambda.tex}}
+\vspace{0.4em}
+
+\small Orçamento livre: mais serviço por +\variacaoCusto\% de custo. Embaixo: a orçamento igual, modo perda.
+\end{frame}
+
 \begin{frame}{Apoio: frota e espera por hora (demanda calibrada)}
 \centering
 \includegraphics[height=0.8\textheight]{frota_deficit_por_hora.pdf}
@@ -242,7 +255,8 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \begin{itemize}
 \item \textbf{Viagens saem da 52 e 63 por quê?} Efeito do rateio: a grade dessas linhas só satura em $\lambda\approx\lambdaMaxLinha$; a da 64, em $\lambda\approx\lambdaMinLinha$.
 \item \textbf{Por que este $\lambda$?} Calibrado: a grade que opera hoje teria ocupação média de 100\%.
-\item \textbf{Quanto custa a grade atual?} R\$~\custoGTFS/dia, contra R\$~\custoTotal{} do ótimo, que atende mais.
+\item \textbf{Quanto custa a grade atual?} R\$~\custoGTFS/dia. O ótimo com orçamento livre custa R\$~\custoTotal{} e atende mais; a orçamento igual, R\$~\moCustoOtimo.
+\item \textbf{A grade da BHTRANS é viável no modelo?} Quase: só a linha \fminAjusteLinha{} às \fminAjusteHora{} fica abaixo do $f^{\min}$ (\fminAjusteGTFS{} $<$ \fminAjusteMin); na comparação, esse $f^{\min}$ é reduzido.
 \item \textbf{Padron sem custo de aquisição?} Sim; por isso o custo de equilíbrio por veículo$\cdot$dia e a sensibilidade ao R\$/km.
 \item \textbf{Embarque $\times$ carga?} Os dados são embarques; o fator de trecho crítico (= 1) não é identificável separado de $\lambda$.
 \item \textbf{Frota necessária não cresce sempre com $\lambda$?} Quando o corredor passa a limitar, parte da espera fica inevitável.

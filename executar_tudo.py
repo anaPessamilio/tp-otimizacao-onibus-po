@@ -15,6 +15,7 @@ ETAPAS = [
     ("cria_instancia_teste.py", "Montagem da instância"),
     ("otimizacao.py", "Solução da instância principal (Gurobi)"),
     ("validacao_grade.py", "Validação contra a grade atual"),
+    ("analise_mesmo_orcamento.py", "Comparação com a grade atual a orçamento igual"),
     ("gera_instancias.py", "Cenários de frota e infraestrutura"),
     ("analise_sensibilidade_alpha.py", "Sensibilidade de alfa_2"),
     ("analise_pareto.py", "Fronteira de Pareto (epsilon-restrição)"),

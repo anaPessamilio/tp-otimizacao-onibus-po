@@ -1,0 +1,29 @@
+perfil,lambda,modo,variante,demanda,viagens_gtfs,viagens_otimo,custo_gtfs,custo_otimo,nao_atendidos_gtfs,nao_atendidos_otimo,indicador_gtfs,indicador_otimo,unidade,reducao_pct,otimo_provado
+gtfs,0.0,perda,mesmo orçamento,65266,664,578,242902.32,215432.97,0.0,0.0,0.0,0.0,% perdidos,,True
+gtfs,0.0,perda,mesmo orçamento e viagens/linha,65266,664,664,242902.32,242601.1,0.0,0.0,0.0,0.0,% perdidos,,True
+gtfs,0.0,espera,mesmo orçamento,65266,664,578,242902.32,215432.97,0.0,0.0,0.0,0.0,min/passageiro,,True
+gtfs,0.0,espera,mesmo orçamento e viagens/linha,65266,664,664,242902.32,242601.1,0.0,0.0,0.0,0.0,min/passageiro,,True
+gtfs,0.25,perda,mesmo orçamento,77361,664,651,242902.32,242806.26,328.0,5.0,0.42,0.01,% perdidos,98.5,True
+gtfs,0.25,perda,mesmo orçamento e viagens/linha,77361,664,664,242902.32,242885.54,328.0,328.0,0.42,0.42,% perdidos,-0.0,True
+gtfs,0.25,espera,mesmo orçamento,77361,664,651,242902.32,242806.26,3833.0,5.0,2.97,0.0,min/passageiro,99.9,True
+gtfs,0.25,espera,mesmo orçamento e viagens/linha,77361,664,664,242902.32,242846.88,3833.0,1391.0,2.97,1.08,min/passageiro,63.7,True
+gtfs,0.435,perda,mesmo orçamento,86310,664,657,242902.32,242881.34,4245.0,2878.0,4.92,3.33,% perdidos,32.2,True
+gtfs,0.435,perda,mesmo orçamento e viagens/linha,86310,664,664,242902.32,242617.67,4245.0,4245.0,4.92,4.92,% perdidos,-0.0,True
+gtfs,0.435,espera,mesmo orçamento,86310,664,656,242902.32,242881.92,50301.0,7803.0,34.97,5.42,min/passageiro,84.5,True
+gtfs,0.435,espera,mesmo orçamento e viagens/linha,86310,664,664,242902.32,242753.09,50301.0,24909.0,34.97,17.32,min/passageiro,50.5,True
+gtfs,0.5,perda,mesmo orçamento,89455,664,664,242902.32,242869.34,6452.0,4930.0,7.21,5.51,% perdidos,23.6,True
+gtfs,0.5,perda,mesmo orçamento e viagens/linha,89455,664,664,242902.32,242409.09,6452.0,6452.0,7.21,7.21,% perdidos,-0.0,True
+gtfs,0.5,espera,mesmo orçamento,89455,664,658,242902.32,242888.49,76743.0,23013.0,51.47,15.44,min/passageiro,70.0,True
+gtfs,0.5,espera,mesmo orçamento e viagens/linha,89455,664,664,242902.32,242880.37,76743.0,40094.0,51.47,26.89,min/passageiro,47.8,True
+gtfs,0.75,perda,mesmo orçamento,101550,664,664,242902.32,235623.96,15230.0,15230.0,15.0,15.0,% perdidos,-0.0,True
+gtfs,0.75,perda,mesmo orçamento e viagens/linha,101550,664,664,242902.32,241876.78,15230.0,15230.0,15.0,15.0,% perdidos,-0.0,True
+gtfs,0.75,espera,mesmo orçamento,101550,664,664,242902.32,242901.53,181948.0,107686.0,107.5,63.63,min/passageiro,40.8,False
+gtfs,0.75,espera,mesmo orçamento e viagens/linha,101550,664,664,242902.32,242890.16,181948.0,110785.0,107.5,65.46,min/passageiro,39.1,True
+gtfs,1.0,perda,mesmo orçamento,113645,664,664,242902.32,230459.58,27325.0,27325.0,24.04,24.04,% perdidos,-0.0,True
+gtfs,1.0,perda,mesmo orçamento e viagens/linha,113645,664,664,242902.32,241324.27,27325.0,27325.0,24.04,24.04,% perdidos,-0.0,True
+gtfs,1.0,espera,mesmo orçamento,113645,664,664,242902.32,242856.43,325516.0,214891.0,171.86,113.45,min/passageiro,34.0,True
+gtfs,1.0,espera,mesmo orçamento e viagens/linha,113645,664,664,242902.32,242899.45,325516.0,217666.0,171.86,114.92,min/passageiro,33.1,True
+tipico,0.435,perda,mesmo orçamento,86310,664,654,242902.32,242884.71,10204.0,3292.0,11.82,3.81,% perdidos,67.7,True
+tipico,0.435,perda,mesmo orçamento e viagens/linha,86310,664,664,242902.32,242892.76,10204.0,4948.0,11.82,5.73,% perdidos,51.5,True
+tipico,0.435,espera,mesmo orçamento,86310,664,655,242902.32,242837.14,51490.0,12907.0,35.79,8.97,min/passageiro,74.9,True
+tipico,0.435,espera,mesmo orçamento e viagens/linha,86310,664,664,242902.32,242896.26,51490.0,23781.0,35.79,16.53,min/passageiro,53.8,True

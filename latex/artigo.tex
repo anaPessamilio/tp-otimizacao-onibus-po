@@ -34,7 +34,7 @@
 \newcommand{\tabela}[1]{\resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{\input{#1}}}
 
 \title{Otimização de Frequências e Tipos de Veículo das Linhas Troncais do MOVE\\no Corredor Antônio Carlos com Programação Linear Inteira Mista}
-\author{\afazer{Nome 1} \and \afazer{Nome 2} \and \afazer{Nome 3}\\[4pt]
+\author{Pedro Henrique A. Tavares \and \afazer{Nome 2} \and \afazer{Nome 3}\\[4pt]
 \small Pesquisa Operacional -- Departamento de Engenharia Elétrica -- UFMG}
 \date{Novembro de 2026}
 
@@ -52,10 +52,13 @@ e a uma fila de passageiros entre faixas horárias. A oferta e a frota atuais v�
 do GTFS da BHTRANS e a demanda, dos embarques registrados nos relatórios mensais
 da BHTRANS. Como o rateio dos embarques das estações entre as linhas é incerto,
 a demanda é delimitada por um intervalo e calibrada de modo que a grade atual
-tenha ocupação média de 100\% ($\lambda=\lambdaCentral$). Nesse cenário, a
-solução ótima oferece mais serviço que a grade atual por um custo
-\variacaoCusto\% maior, com espera excedente de \esperaMin{} minuto por
-passageiro. A escassez de frota no pico da manhã só aparece a partir de
+tenha ocupação média de 100\% ($\lambda=\lambdaCentral$). Nesse cenário, com o
+mesmo orçamento diário e a mesma frota da grade atual, a solução ótima reduz os
+passageiros não atendidos de \moPctGTFS\% para \moPctOtimo\% da demanda
+($-$\moReducaoPerda\%). Esse ganho vem da realocação de viagens entre as linhas
+e, portanto, depende do rateio dos embarques das estações; com um perfil horário
+independente da grade, só redistribuir as viagens de cada linha ao longo do dia
+já reduz os não atendidos em \moReducaoTipicoFixa\%. A escassez de frota no pico da manhã só aparece a partir de
 $\lambda\approx\lambdaGargalo$; no limite inferior da demanda, a frota atual
 sobra. A fronteira de Pareto, os cenários de frota e a análise de dualidade
 completam a análise.
@@ -73,14 +76,24 @@ Nas estações desse corredor são registrados, em média, \embarquesEstacoes{}
 embarques por dia útil \citep{bhtrans2026}.
 
 Definir a frequência de cada linha -- quantas viagens por hora ela realiza -- é
-uma das etapas centrais do planejamento operacional \citep{ceder2016}.
+uma das etapas centrais do planejamento operacional \citep{ceder2016}. Essa
+etapa (\emph{frequency setting}) fica entre o desenho da rede e a programação de
+veículos e tripulações, e afeta diretamente tanto o custo das concessionárias
+quanto o nível de serviço percebido pelos usuários \citep{schmidt2024}.
 Frequência baixa deixa passageiros nos pontos e provoca superlotação; frequência
 alta aumenta o custo e exige mais veículos, um recurso limitado e compartilhado
 entre linhas e horários. A decisão envolve, portanto, um \emph{trade-off} entre
 nível de serviço e custo, acoplado pela frota.
 
-\afazer{Revisar e completar: relevância do problema para BH, contexto do MOVE e
-motivação do grupo.}
+Em corredores de BRT como o do MOVE, esse dimensionamento é especialmente
+delicado. O corredor concentra uma demanda pendular alta nos horários de pico,
+mas a frota é compartilhada entre várias linhas troncais. Além disso, como os
+itinerários são longos e os ciclos das linhas troncais passam de uma hora
+(Tabela~\ref{tab:parametros}), um ônibus que parte em uma faixa horária continua
+em operação nas faixas seguintes, o que acopla as decisões de despacho ao longo
+do dia. Uma grade orientada apenas a reduzir custos pode comprometer o
+atendimento nos períodos críticos, e uma grade orientada apenas ao serviço
+esbarra no limite da frota e do próprio corredor.
 
 Este artigo formula o problema como um PLIM e o resolve de forma exata com o
 Gurobi. As contribuições são: (i) uma restrição de frota acumulada, que
@@ -88,7 +101,9 @@ contabiliza os ônibus que partiram em faixas anteriores e ainda não retornaram
 (ii) o tipo de veículo como variável de decisão; (iii) uma fila de passageiros
 entre faixas horárias; (iv) uma instância construída com dados abertos reais,
 com a demanda calibrada pela grade atual e analisada em todo o intervalo
-compatível com os dados; e (v) a fronteira de Pareto custo $\times$ nível de
+compatível com os dados; (v) uma comparação com a grade atual a orçamento
+igual, que separa o ganho de realocar viagens entre linhas do ganho de
+redistribuí-las no tempo; e (vi) a fronteira de Pareto custo $\times$ nível de
 serviço e uma análise de dualidade.
 
 O artigo está organizado assim: a Seção~\ref{sec:revisao} revisa a literatura; a
@@ -100,11 +115,21 @@ apresenta os resultados; e a Seção~\ref{sec:conclusao} conclui.
 \section{Revisão da literatura}\label{sec:revisao}
 % =====================================================================
 
-\afazer{Esta seção é avaliada como pesquisa bibliográfica do grupo. O professor
-espera um parágrafo por referência, discutindo de forma crítica o modelo, a
-ferramenta de solução e os resultados de cada trabalho. Meta: 6 a 8 trabalhos.
-Os dois parágrafos abaixo são pontos de partida -- confiram nas fontes originais
-e reescrevam com as palavras do grupo.}
+\paragraph{Planejamento de linhas e frequências.}
+O planejamento de sistemas de transporte coletivo envolve decisões
+interdependentes e de alta complexidade combinatória, tradicionalmente tratadas
+em etapas sequenciais: desenho das linhas, definição de frequências, programação
+horária e escalonamento de frota e tripulação. \citet{schmidt2024} sistematizam
+as etapas de planejamento de linhas (\emph{line planning}) e de definição de
+frequências (\emph{frequency setting}) e mostram que elas têm impacto direto
+sobre a eficiência operacional e sobre a qualidade percebida pelos usuários. O
+trabalho destaca que a formulação desses problemas exige atenção ao nível de
+agregação da rede e à forma como o roteamento dos passageiros (\emph{passenger
+routing}) é acoplado às decisões de oferta, já que mudar a frequência ou o
+traçado de uma linha altera os tempos de espera, as transferências e a
+distribuição da demanda na rede. Neste trabalho, com cinco linhas troncais de um
+mesmo corredor e sem dados de origem e destino, esse roteamento não é modelado:
+a demanda de cada linha é um dado de entrada.
 
 \citet{ceder2016} sistematiza os métodos de definição de frequências usados na
 prática, baseados em dados de carregamento (passageiros no ponto de carga
@@ -113,19 +138,42 @@ separadamente; a frota disponível não entra como restrição conjunta entre
 linhas, que é o acoplamento tratado neste trabalho.
 \afazer{Conferir no livro e aprofundar.}
 
-\citet{arbex2015} tratam conjuntamente o projeto da rede e a definição de
-frequências como um problema multiobjetivo, minimizando o custo dos passageiros
-e o custo do operador, e o resolvem com um algoritmo genético de objetivos
-alternados. A abordagem lida com um problema maior (inclui o traçado das
-linhas), mas, por ser heurística, não garante otimalidade; aqui, com as linhas
-fixas, o problema é linear e é resolvido de forma exata.
-\afazer{Conferir no artigo: instâncias usadas, resultados obtidos.}
+\paragraph{Projeto de rede e frequências com metaheurísticas.}
+Quando o traçado das linhas e as frequências são decididos em conjunto para uma
+rede urbana completa, tem-se o problema de projeto de rede e definição de
+frequências (\emph{Transit Network Design and Frequency Setting Problem},
+TNDFSP), estudado por \citet{arbex2014} e \citet{arbex2015}. Os autores tratam
+o problema como multiobjetivo, pois minimizar o custo generalizado dos
+passageiros (espera, viagem e transbordo) conflita com minimizar o custo
+operacional da frota. A alocação da demanda é estocástica, modelada por escolha
+discreta \emph{Logit} e pelo fenômeno de linhas comuns (\emph{common lines}), o
+que torna o problema não linear e de natureza NP-difícil. Para lidar com isso,
+os autores empregam um algoritmo genético com objetivos alternados (AOGA) e
+obtêm aproximações da fronteira de Pareto em instâncias clássicas da literatura
+e em redes metropolitanas de grande porte. A abordagem lida com um problema
+maior, que inclui o traçado das linhas, mas, por ser heurística, não garante
+otimalidade.
 
-\afazer{Acrescentar 4 a 6 trabalhos. Sugestões de busca (Google Scholar,
-Periódicos CAPES): ``frequency setting problem'', ``transit frequency
-optimization'', ``mixed fleet'' / ``vehicle type frequency setting'', ``line
-planning'' (ver \citet{schmidt2024}), revisões sobre planejamento de ônibus e
-trabalhos brasileiros sobre BRT.}
+\paragraph{Posicionamento deste trabalho.}
+Quando a topologia das linhas já está definida e o foco é a alocação tática de
+capacidade em um corredor específico, o espaço de decisão se reduz bastante
+\citep{schmidt2024}. Nesse caso, dados abertos padronizados e
+georreferenciados, como o GTFS da BHTRANS \citep{gtfsbhtrans}, fornecem
+diretamente os parâmetros operacionais reais: itinerários, extensões, tempos de
+ciclo e intervalos programados. Diferentemente da abordagem de redes completas
+de \citet{arbex2015}, em que as rotas são desconhecidas e o uso de heurísticas
+se impõe, com a rede fixada a partir do GTFS a definição de frequências e o
+dimensionamento da frota podem ser formulados como um PLIM. Isso permite
+incorporar restrições rígidas de capacidade dos veículos e de disponibilidade de
+frota e obter soluções com otimalidade provada em tempo computacional reduzido.
+
+\afazer{A revisão é avaliada como pesquisa bibliográfica do grupo: um parágrafo
+por referência, discutindo de forma crítica o modelo, a ferramenta de solução e
+os resultados de cada trabalho. Meta: 6 a 8 trabalhos; faltam de 3 a 5.
+Sugestões de busca (Google Scholar, Periódicos CAPES): ``frequency setting
+problem'', ``transit frequency optimization'', ``mixed fleet'' / ``vehicle type
+frequency setting'', revisões sobre planejamento de ônibus e trabalhos
+brasileiros sobre BRT.}
 
 % =====================================================================
 \section{Descrição do problema e modelagem}\label{sec:modelo}
@@ -385,9 +433,14 @@ R\$~\custoGTFS{} por dia e gera espera média de \esperaMinGTFS{} minutos por
 passageiro, porque a fila se acumula nas linhas cuja grade é insuficiente; a
 solução ótima reduz a espera para \esperaMin{} minuto com custo
 \variacaoCusto\% maior. No modo perda, a grade perderia \pctPerdidosGTFS\% dos
-passageiros, contra \pctPerdidosOtimo\% da solução ótima. O resultado, portanto,
-não é uma economia: é \emph{mais serviço por mais custo}, com a mesma frota e o
-mesmo limite de corredor.
+passageiros, contra \pctPerdidosOtimo\% da solução ótima. Essa comparação,
+porém, não é a mais justa: a solução ótima gasta mais e o ganho em $Z$ depende do
+peso hipotético $\alpha_2$. Além disso, a espera de \esperaMinGTFS{} minutos da
+grade atual é, em boa parte, um efeito do modelo de fila: como cada viagem de
+uma linha recebe o mesmo número de embarques, o excesso sobre a capacidade se
+repete em todas as faixas e a fila cresce o dia inteiro sem se dissipar. Por
+isso, a comparação principal deste trabalho é feita a orçamento igual
+(Seção~\ref{sec:mesmo_orcamento}) e no modo perda.
 
 \begin{table}[htbp]
 \centering
@@ -404,10 +457,10 @@ regra de construção da demanda. A ``redistribuição'' -- menos viagens nas li
 52 e 63, mais nas linhas 51, 64 e 67 -- decorre, em grande parte, do rateio dos
 embarques (Seção~\ref{sec:dados}), e a perda da grade atual por linha é, por
 construção, o excesso de embarques por viagem sobre a capacidade. Essa parte da
-comparação não é uma validação independente. O valor agregado do modelo está na
-\emph{distribuição horária} das viagens e no \emph{acoplamento pela frota}: decidir
-em que horas acrescentar viagens (Figuras~\ref{fig:partidas} e~\ref{fig:linhas})
-sem ultrapassar a frota nas horas de pico.
+comparação não é uma validação independente. A Seção~\ref{sec:mesmo_orcamento}
+quantifica quanto do ganho vem dessa realocação entre linhas e quanto vem da
+\emph{distribuição horária} das viagens sob o acoplamento pela frota
+(Figuras~\ref{fig:partidas} e~\ref{fig:linhas}).
 
 \begin{table}[htbp]
 \centering
@@ -430,6 +483,77 @@ sem ultrapassar a frota nas horas de pico.
 \caption{Demanda, capacidade ótima e capacidade da grade atual por linha e faixa horária.}
 \label{fig:linhas}
 \end{figure}
+
+\subsection{Comparação a orçamento igual}\label{sec:mesmo_orcamento}
+
+Para saber se o modelo melhora a grade atual \emph{sem gastar mais}, resolve-se,
+de forma lexicográfica, (1)~$\min \sum_{l,t} w_{lt}$ sujeito a todas as
+restrições do modelo, a custo operacional não superior ao da grade atual e a não
+mais viagens que ela; e (2)~$\min$ custo com $\sum w$ no valor ótimo de~(1). O
+peso $\alpha_2$ não interfere. A frota ($F=\frotaMax$) e o corredor
+($\bar P=\capCorredor$) já são, por definição, os exigidos pela grade atual; o
+único ponto em que ela viola o padrão de serviço do modelo -- linha
+\fminAjusteLinha{} às \fminAjusteHora, com \fminAjusteGTFS{} viagens contra
+$f^{\min}=\fminAjusteMin$ -- tem $f^{\min}$ reduzido ao valor do GTFS. Assim, a
+grade atual é uma solução viável (e é usada como solução inicial), e o ótimo
+nunca é pior que ela. Em uma segunda variante, cada linha mantém o seu total
+diário de viagens do GTFS, de modo que só a distribuição \emph{horária} muda;
+isso separa o ganho de realocar viagens \emph{entre} linhas, que herda a
+incerteza do rateio, do ganho de redistribuí-las \emph{no tempo}.
+
+\begin{table}[htbp]
+\centering
+\caption{Grade atual $\times$ solução ótima com o mesmo orçamento, a mesma frota e no máximo as mesmas viagens ($\lambda=\lambdaCentral$). Perda: \% da demanda não atendida; fila: espera excedente média por passageiro. ``Viagens/linha fixas'': cada linha mantém o total diário do GTFS.}
+\label{tab:mesmo_orcamento}
+\small
+\tabela{tabelas/mesmo_orcamento.tex}
+\end{table}
+
+A Tabela~\ref{tab:mesmo_orcamento} resume os resultados. No modo perda, com o
+perfil horário de base, o mesmo orçamento atende melhor:
+\moPerdidosOtimo{} passageiros não atendidos por dia (\moPctOtimo\%), contra
+\moPerdidosGTFS{} (\moPctGTFS\%) da grade atual, uma redução de
+\moReducaoPerda\%, com \moViagensOtimo{} viagens e custo de
+R\$~\moCustoOtimo{} por dia. Mas, quando cada linha mantém o seu total de
+viagens, a redução é de \moReducaoPerdaFixa\%: com o perfil horário de base, \emph{todo} o
+ganho vem de transferir viagens das linhas 52 e 63 para as linhas 51, 64 e 67
+(Tabela~\ref{tab:mesmo_orcamento_linhas}). Isso é esperado, pois nesse perfil a
+demanda de cada hora é proporcional às viagens programadas, e a grade de cada
+linha já está, por construção, distribuída no tempo como a demanda. Esse
+resultado, portanto, só é tão confiável quanto o rateio dos embarques das
+estações.
+
+Com o perfil horário típico, independente da grade, a redistribuição no tempo
+passa a ter valor próprio: mantendo as viagens de cada linha, os não atendidos
+caem de \moPctGTFSTipico\% para \moPctTipicoFixa\% ($-$\moReducaoTipicoFixa\%), e
+com realocação livre a redução chega a \moReducaoTipico\%. No modo fila, as
+reduções são maiores (de \moEsperaGTFS{} para \moEsperaOtimo{} minutos por
+passageiro), mas, pelo acúmulo de fila descrito acima, esses valores
+superestimam o ganho e são mostrados apenas como referência.
+
+\begin{table}[htbp]
+\centering
+\caption{Grade atual $\times$ solução ótima a orçamento igual, por linha (modo perda, $\lambda=\lambdaCentral$, realocação livre).}
+\label{tab:mesmo_orcamento_linhas}
+\small
+\tabela{tabelas/mesmo_orcamento_linhas.tex}
+\end{table}
+
+O ganho também depende do nível de demanda (Tabela~\ref{tab:mesmo_orcamento_lambda}).
+No limite inferior ($\lambda=0$), a grade atual já atende todos e o mesmo
+serviço sai \moEconomiaLambdaZero\% mais barato (R\$~\moCustoLambdaZero{} por
+dia), com menos viagens. Em $\lambda=0{,}25$, a realocação elimina
+\moReducaoQuarto\% das perdas. A partir de $\lambda\approx\moLambdaSemGanho$, a
+frota e o corredor estão saturados nas horas de pico, a mesma frota não consegue
+atender mais ninguém e o ganho se limita a reduzir o custo com o mesmo serviço.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparação a orçamento igual em função de $\lambda$ (perfil de base, modo perda, realocação livre).}
+\label{tab:mesmo_orcamento_lambda}
+\small
+\tabela{tabelas/mesmo_orcamento_lambda.tex}
+\end{table}
 
 \subsection{Resultados por nível de demanda}\label{sec:lambda}
 
@@ -486,7 +610,7 @@ gargalo principal é a frota.
 
 \begin{table}[htbp]
 \centering
-\caption{Cenários de frota e infraestrutura. ``Padron'': viagens feitas com Padron; ``Equilíbrio'': maior custo fixo diário por veículo acrescido que ainda reduz $Z$. $^\dagger$Tempo limite atingido (gap $\le 0{,}1\%$).}
+\caption{Cenários de frota e infraestrutura. ``Padron'': viagens feitas com Padron; ``Equilíbrio'': maior custo fixo diário por veículo acrescido que ainda reduz $Z$. $^\dagger$Tempo limite atingido (gap $\le \gapMaxCenarios\%$).}
 \label{tab:cenarios}
 \small
 \tabela{tabelas/cenarios.tex}
@@ -535,10 +659,12 @@ fundamentado e rodar de novo.}
 
 A Tabela~\ref{tab:robustez} repete a instância calibrada com (i) um perfil
 horário típico de corredor, independente da grade atual, e (ii) o modo
-``perda''. Em ambos, o número de viagens e o custo variam pouco, o que indica
-que as conclusões sobre a distribuição horária não dependem da circularidade do
+``perda''. Em ambos, o número de viagens e o custo da solução ótima variam
+pouco, de modo que o dimensionamento total não depende da circularidade do
 perfil nem da hipótese sobre o comportamento do passageiro não atendido. O teste
-não elimina, contudo, a dependência do rateio entre as linhas discutida acima.
+não elimina, contudo, a dependência do rateio entre as linhas: como mostra a
+Seção~\ref{sec:mesmo_orcamento}, com o perfil de base o ganho sobre a grade
+atual vem inteiramente da realocação entre linhas.
 
 \begin{table}[htbp]
 \centering
@@ -586,23 +712,46 @@ troncais do MOVE no Corredor Antônio Carlos como um PLIM com frota acumulada,
 fila de passageiros, capacidade do corredor e padrão de serviço, resolvido de
 forma exata pelo Gurobi em menos de um segundo.
 
-Com a demanda calibrada pela grade atual, a solução ótima oferece mais serviço
-que a grade programada por um custo \variacaoCusto\% maior, com a mesma frota.
-O total de viagens de cada linha é determinado, em grande parte, pela forma como
-os embarques das estações foram rateados entre as linhas; o valor agregado do
-modelo está em decidir em que horas operar as viagens sob a restrição de frota.
+A comparação com a grade programada pela BHTRANS foi feita sem gastar mais: com
+o mesmo orçamento, a mesma frota e no máximo as mesmas viagens, a solução ótima
+reduz os passageiros não atendidos de \moPctGTFS\% para \moPctOtimo\% da demanda
+calibrada ($-$\moReducaoPerda\%). Esse resultado deve ser lido com duas ressalvas. Primeiro,
+ele vem inteiramente de transferir viagens das linhas 52 e 63 para as linhas 51,
+64 e 67, e essa diferença entre linhas decorre do rateio dos embarques das
+estações, que os dados abertos não permitem verificar; não se pode afirmar, com
+estes dados, que a grade atual seja ineficiente. Segundo, ele depende do nível
+de demanda: no limite inferior a grade atual já atende todos (e o mesmo serviço
+custaria \moEconomiaLambdaZero\% menos), e a partir de
+$\lambda\approx\moLambdaSemGanho$ a frota está saturada e não há ganho de
+serviço possível. Com um perfil horário independente da grade, redistribuir as
+viagens de cada linha ao longo do dia reduz os não atendidos em
+\moReducaoTipicoFixa\%, o que indica que, com dados de demanda por hora, o
+modelo tem valor próprio na distribuição horária sob a restrição de frota. Com
+orçamento livre, a solução ótima oferece ainda mais serviço, por um custo
+\variacaoCusto\% maior.
 A frota só se torna o gargalo do pico da manhã a partir de
 $\lambda\approx\lambdaGargalo$; no limite inferior da demanda, ela sobra. Para
 ampliar a oferta, articulados extras rendem mais por veículo que Padron, a
 menos que o Padron seja sensivelmente mais barato por quilômetro e que seus
 custos fixos sejam baixos.
 
-Como trabalhos futuros, destacam-se: obter a carga medida no trecho crítico e a
-demanda por linha nas estações (eliminando a dependência do rateio); incluir as
-linhas alimentadoras e as transferências; incluir custos fixos de frota; e
-estender o modelo ao projeto conjunto de linhas e frequências.
+Como limitações, destacam-se: (i) a demanda vem de embarques agregados,
+registrados nas catracas das estações e rateados pelas viagens programadas, e
+não da carga medida no trecho crítico por bilhetagem eletrônica ou contagem
+embarcada; (ii) as linhas alimentadoras e as transferências nas estações de
+integração (Vilarinho, Pampulha e Venda Nova) não são modeladas; e (iii) a
+demanda e os tempos de ciclo são tratados de forma determinística.
 
-\afazer{Revisar as conclusões com a visão do grupo.}
+Como trabalhos futuros, destacam-se: obter a carga medida no trecho crítico, a
+demanda por linha nas estações e o perfil horário real dos embarques -- por
+exemplo, com dados de bilhetagem origem--destino --, eliminando a dependência do
+rateio e da grade atual, condição para afirmar se a grade atual pode ser
+melhorada; incluir as linhas alimentadoras e as transferências; incluir custos
+fixos de frota; estender o modelo à programação explícita dos veículos
+(\emph{vehicle scheduling}), com viagens ociosas e paradas para abastecimento;
+desenvolver uma formulação estocástica ou robusta para a variabilidade dos
+tempos de viagem nos picos; e estender o modelo ao projeto conjunto de linhas e
+frequências.
 
 \bibliographystyle{plainnat}
 \bibliography{referencias}
