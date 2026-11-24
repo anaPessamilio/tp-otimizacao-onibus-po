@@ -172,6 +172,24 @@ for perfil in ["gtfs", "tipico"]:
     seps.append(i + 1)
 escrever("mesmo_orcamento.tex", tabular("lllrrr", linhas, separadores=tuple(seps[:-1])))
 
+
+def linha_mo(perfil, modo, var):
+    r = mo_cal[(mo_cal.perfil == perfil) & (mo_cal.modo == modo) & (mo_cal.variante == var)].iloc[0]
+    return [NOME_PERFIL[perfil], NOME_VAR[var], ind_mo(r.indicador_gtfs, modo),
+            ind_mo(r.indicador_otimo, modo), red_mo(r.reducao_pct)]
+
+
+# slides: manchete em perdidos (modo perda), 3 linhas; fila vai para o apoio
+escrever("mesmo_orcamento_slide.tex", tabular("llrrr", [
+    ["Perfil horário", "Realocação", "Perdidos: grade atual", "Perdidos: ótimo", "Redução"],
+    linha_mo("gtfs", "perda", "mesmo orçamento"),
+    linha_mo("gtfs", "perda", "mesmo orçamento e viagens/linha"),
+    linha_mo("tipico", "perda", "mesmo orçamento e viagens/linha")]))
+escrever("mesmo_orcamento_fila.tex", tabular("llrrr", [
+    ["Perfil horário", "Realocação", "Espera exc.: grade atual", "Espera exc.: ótimo", "Redução"]]
+    + [linha_mo(p, "espera", v) for p in ["gtfs", "tipico"]
+       for v in ["mesmo orçamento", "mesmo orçamento e viagens/linha"]]))
+
 mo_lam = mo[(mo.perfil == "gtfs") & (mo.modo == "perda") & (mo.variante == "mesmo orçamento")]
 linhas = [[r"$\lambda$", "Perdidos: grade atual", "Perdidos: ótimo", "Redução",
            r"Custo do ótimo (R\$)", "Viagens do ótimo"]]
@@ -299,7 +317,7 @@ numeros = {
     "embViagemCentral": br(lc.embarques_por_viagem_gtfs, 1), "embViagemUm": br(l1.embarques_por_viagem_gtfs, 1),
     "esperaLambdaZero": br(l0.espera_min_otimo, 2), "esperaLambdaUm": br(l1.espera_min_otimo, 2),
     "frotaNecZero": br(l0.frota_necessaria, 0), "frotaNecUm": br(l1.frota_necessaria, 0),
-    "frotaNecCentral": br(lc.frota_necessaria, 0), "precoLambdaUm": br(l1.maior_preco_sombra_frota, 0),
+    "frotaNecCentral": br(lc.frota_necessaria, 1), "precoLambdaUm": br(l1.maior_preco_sombra_frota, 0),
     "frotaMax": str(F), "frotaMOVE": str(int(frota_bh.frota_brt_move)), "capCorredor": str(CAP),
     "esperaFnoventa": br(cen_val(cen_c, "90 articulados", "espera_media_min"), 2),
     "esperaMaisDezArt": br(cen_val(cen_c, "+10 articulados", "espera_media_min"), 2),
@@ -389,6 +407,14 @@ numeros.update({
     "nFminAjustados": str(len(mo_fmin)),
     "gapMaxCenarios": br(cen.loc[~cen.otimo_provado, "gap_pct"].max(), 2)
                       if (~cen.otimo_provado).any() else "0",
+})
+
+# teto de viagens da comparação a orçamento igual: capacidade diária da grade
+numeros.update({
+    "capArticulado": str(ART["capacidade"]),
+    "capGradeLugares": br(int(inst["viagens_gtfs"].sum()) * ART["capacidade"], 0),
+    "moPctLambdaTresQuartos": br(mo_val("gtfs", "perda", LIVRE, "indicador_otimo", 0.75), 2),
+    "moPctLambdaUm": br(mo_val("gtfs", "perda", LIVRE, "indicador_otimo", 1.0), 2),
 })
 
 # justificativa de α2 (valor do tempo de espera) e comparação com α2 = 25

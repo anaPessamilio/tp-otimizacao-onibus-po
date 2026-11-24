@@ -97,6 +97,9 @@ PERFIL_HORARIO = "gtfs"
 FATOR_TRECHO_CRITICO = 1.0
 
 # ---------- Demanda hipotética / perfil típico ----------
+# [HIPÓTESE] Perfil horário estilizado de corredor (picos às 6-7h e 17-18h),
+# definido pelo grupo, sem fonte medida: a BHTRANS publica apenas totais
+# diários. Usado só como teste de sensibilidade (PERFIL_HORARIO = "tipico").
 DEMANDA_PICO_LINHA = {"51": 3200, "52": 1800, "63": 1400, "64": 1200, "67": 1100}
 FATORES_DEMANDA = {
     0: 0.05, 1: 0.02, 2: 0.01, 3: 0.02, 4: 0.15, 5: 0.50,

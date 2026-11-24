@@ -34,7 +34,7 @@
 \newcommand{\tabela}[1]{\resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{\input{#1}}}
 
 \title{Otimização de Frequências e Tipos de Veículo das Linhas Troncais do MOVE\\no Corredor Antônio Carlos com Programação Linear Inteira Mista}
-\author{Pedro Henrique Araujo \and Marcus Vinicius \and Ana Carolina Pessamilio\\[4pt]
+\author{Pedro Henrique Araujo \and Marcus Vinicius Bittencourt \and Ana Carolina Pessamilio\\[4pt]
 \small Pesquisa Operacional -- Departamento de Engenharia Elétrica -- UFMG}
 \date{Novembro de 2026}
 
@@ -57,8 +57,9 @@ mesmo orçamento diário e a mesma frota da grade atual, a solução ótima redu
 passageiros não atendidos de \moPctGTFS\% para \moPctOtimo\% da demanda
 ($-$\moReducaoPerda\%). Esse ganho vem da realocação de viagens entre as linhas
 e, portanto, depende do rateio dos embarques das estações; com um perfil horário
-independente da grade, só redistribuir as viagens de cada linha ao longo do dia
-já reduz os não atendidos em \moReducaoTipicoFixa\%. A escassez de frota no pico da manhã só aparece a partir de
+estilizado, independente da grade, só redistribuir as viagens de cada linha ao
+longo do dia já reduz os não atendidos em \moReducaoTipicoFixa\%. A escassez de
+frota no pico da manhã só aparece a partir de
 $\lambda\approx\lambdaGargalo$; no limite inferior da demanda, a frota atual
 sobra. A fronteira de Pareto, os cenários de frota e a análise de dualidade
 completam a análise.
@@ -405,6 +406,18 @@ circularidade com um perfil horário típico, independente da grade
 (Seção~\ref{sec:robustez}). A demanda também não inclui os passageiros que
 chegam por linhas alimentadoras e se transferem nas estações de integração.
 
+\paragraph{Perfil horário típico (teste de sensibilidade).}
+O perfil horário ``típico'' é um perfil estilizado de corredor, definido pelo
+grupo, e não um dado medido: os relatórios da BHTRANS trazem apenas totais
+diários, e não há contagem horária pública das linhas troncais. Ele atribui a
+cada hora um fator relativo ao pico, com pico da manhã às 6h (fator 1,00) e 7h
+(0,95), pico da tarde às 17h (0,95) e 18h (0,90), entrepico entre 0,40 e 0,55 e
+madrugada abaixo de 0,05. O mesmo perfil vale para todas as linhas; o total
+diário de cada linha é o mesmo do perfil de base e só a sua distribuição pelas
+24 faixas muda, proporcionalmente aos fatores. É, portanto, uma hipótese,
+adotada apenas como teste de sensibilidade, para verificar se as conclusões
+dependem de a demanda horária ter sido construída a partir da própria grade.
+
 % =====================================================================
 \section{Descrição do algoritmo}\label{sec:algoritmo}
 % =====================================================================
@@ -441,7 +454,7 @@ reportados com o gap alcançado. O Apêndice~\ref{ap:log} reproduz o log.
 A soma ponderada~\eqref{eq:fo} só encontra soluções suportadas da fronteira.
 Para obtê-la de forma completa usou-se o método $\varepsilon$-restrição: minimizar
 o custo operacional sujeito a $\sum w_{lt}\le\varepsilon$, variando $\varepsilon$
-entre a menor espera possível (obtida lexicograficamente) e uma espera média de
+entre a menor espera excedente possível (obtida lexicograficamente) e uma espera excedente média de
 18 minutos por passageiro.
 
 \paragraph{Dualidade e pós-otimização.}
@@ -492,7 +505,7 @@ início do pico ainda estão em circulação (Figura~\ref{fig:frota}).
 A grade atual do GTFS foi avaliada com as mesmas regras do modelo e comparada à
 solução ótima \emph{no mesmo modo} de tratamento dos não atendidos
 (Tabela~\ref{tab:comparacao}). No modo fila, a grade atual custa
-R\$~\custoGTFS{} por dia e gera espera média de \esperaMinGTFS{} minutos por
+R\$~\custoGTFS{} por dia e gera espera excedente média de \esperaMinGTFS{} minutos por
 passageiro, porque a fila se acumula nas linhas cuja grade é insuficiente; a
 solução ótima reduz a espera para \esperaMin{} minuto com custo
 \variacaoCusto\% maior. No modo perda, a grade perderia \pctPerdidosGTFS\% dos
@@ -586,11 +599,13 @@ linha já está, por construção, distribuída no tempo como a demanda. Esse
 resultado, portanto, só é tão confiável quanto o rateio dos embarques das
 estações.
 
-Com o perfil horário típico, independente da grade, a redistribuição no tempo
+Com o perfil horário típico -- estilizado e independente da grade
+(Seção~
+ef{sec:dados}) --, a redistribuição no tempo
 passa a ter valor próprio: mantendo as viagens de cada linha, os não atendidos
 caem de \moPctGTFSTipico\% para \moPctTipicoFixa\% ($-$\moReducaoTipicoFixa\%), e
 com realocação livre a redução chega a \moReducaoTipico\%. No modo fila, as
-reduções são maiores (de \moEsperaGTFS{} para \moEsperaOtimo{} minutos por
+reduções são maiores (espera excedente de \moEsperaGTFS{} para \moEsperaOtimo{} minutos por
 passageiro), mas, pelo acúmulo de fila descrito acima, esses valores
 superestimam o ganho e são mostrados apenas como referência.
 
@@ -606,9 +621,16 @@ O ganho também depende do nível de demanda (Tabela~\ref{tab:mesmo_orcamento_la
 No limite inferior ($\lambda=0$), a grade atual já atende todos e o mesmo
 serviço sai \moEconomiaLambdaZero\% mais barato (R\$~\moCustoLambdaZero{} por
 dia), com menos viagens. Em $\lambda=0{,}25$, a realocação elimina
-\moReducaoQuarto\% das perdas. A partir de $\lambda\approx\moLambdaSemGanho$, a
-frota e o corredor estão saturados nas horas de pico, a mesma frota não consegue
-atender mais ninguém e o ganho se limita a reduzir o custo com o mesmo serviço.
+\moReducaoQuarto\% das perdas. A partir de $\lambda\approx\moLambdaSemGanho$,
+com o teto de \viagensGTFS{} viagens, a grade atual já está no limite de
+capacidade: \viagensGTFS{} viagens de \capArticulado{} lugares oferecem
+\capGradeLugares{} lugares por dia, e os perdidos do ótimo são exatamente o
+excesso da demanda sobre esse total (\moPctLambdaTresQuartos\% em
+$\lambda=0{,}75$ e \moPctLambdaUm\% em $\lambda=1$). O ganho nulo vem, portanto,
+do teto de viagens imposto à comparação, e não da frota, que ainda tem folga
+nessas soluções; o ótimo apenas reduz o custo com o mesmo serviço. Para atender
+mais passageiros seria preciso liberar o orçamento e o número de viagens, como
+nas Seções~\ref{sec:resultados} e~\ref{sec:lambda}.
 
 \begin{table}[htbp]
 \centering
@@ -621,8 +643,13 @@ atender mais ninguém e o ganho se limita a reduzir o custo com o mesmo serviço
 \subsection{Resultados por nível de demanda}\label{sec:lambda}
 
 A Tabela~\ref{tab:lambda} e a Figura~\ref{fig:lambda} repetem a otimização em
-todo o intervalo de demanda. No limite inferior ($\lambda=0$), seriam
-necessários apenas \frotaNecZero{} veículos, a espera é de
+todo o intervalo de demanda. A coluna ``frota necessária'' não é a frota usada
+pela solução ótima, que nunca passa de $F=\frotaMax$: é a menor frota que
+alcançaria o menor nível de não atendimento possível se a frota fosse
+ilimitada, mantidos o corredor e o padrão de serviço. Um valor acima de
+\frotaMax{} -- como \frotaNecCentral{} na instância calibrada -- indica, portanto,
+que a frota atual impede chegar a esse mínimo. No limite inferior ($\lambda=0$), seriam
+necessários apenas \frotaNecZero{} veículos, a espera excedente é de
 \esperaLambdaZero{} minuto e o preço-sombra da frota é nulo: não há escassez. O
 preço-sombra passa a ser positivo a partir de $\lambda\approx\lambdaGargalo$, e
 só a partir daí a frota é o gargalo. No limite superior, seriam necessários
@@ -636,7 +663,7 @@ da manhã vale para $\lambda\gtrsim\lambdaGargalo$.
 
 \begin{table}[htbp]
 \centering
-\caption{Resultados por nível de demanda ($\lambda=0$: limite inferior; $\lambda=1$: superior).}
+\caption{Resultados por nível de demanda ($\lambda=0$: limite inferior; $\lambda=1$: superior). ``Frota necessária'': menor frota (contínua) que alcança o menor não atendimento possível com frota ilimitada, mantidos o corredor e o padrão de serviço; não é a frota usada pela solução ótima, limitada a $F=\frotaMax$.}
 \label{tab:lambda}
 \small
 \tabela{tabelas/demanda_lambda.tex}
@@ -645,16 +672,17 @@ da manhã vale para $\lambda\gtrsim\lambdaGargalo$.
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{demanda_lambda.pdf}
-\caption{Espera média, frota necessária e maior preço-sombra da frota em função de $\lambda$ (linha pontilhada: instância calibrada).}
+\caption{Espera excedente média, frota necessária e maior preço-sombra da frota em função de $\lambda$ (linha pontilhada: instância calibrada).}
 \label{fig:lambda}
 \end{figure}
 
 \subsection{Cenários de frota e infraestrutura}
 
-Nos cenários da Tabela~\ref{tab:cenarios}, resolvidos na instância calibrada e
+Nos cenários da Tabela~\ref{tab:cenarios} e da Figura~\ref{fig:cenarios},
+resolvidos na instância calibrada e
 no limite superior de demanda, o modelo \emph{decide} o tipo de veículo de cada
 viagem; o cenário só altera o que está disponível. Com 90 articulados (valor da
-proposta inicial), a espera sobe para \esperaFnoventa{} minuto por passageiro.
+proposta inicial), a espera excedente sobe para \esperaFnoventa{} minuto por passageiro.
 Com 15 ônibus Padron a mais, a espera cai para \esperaPadron{} e o custo
 operacional também cai, porque os Padron, mais baratos por quilômetro, assumem
 \viagensPadron{} viagens. Essa conclusão, porém, depende de duas hipóteses: (i) o
@@ -682,13 +710,13 @@ gargalo principal é a frota.
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{cenarios.pdf}
-\caption{Espera média e custo operacional por cenário (instância calibrada).}
+\caption{Espera excedente média e custo operacional por cenário (instância calibrada).}
 \label{fig:cenarios}
 \end{figure}
 
 \subsection{Fronteira de Pareto e escolha de $\alpha_2$}
 
-A Figura~\ref{fig:pareto} mostra a fronteira custo $\times$ espera obtida pelo
+A Figura~\ref{fig:pareto} mostra a fronteira custo $\times$ espera excedente obtida pelo
 método $\varepsilon$-restrição e as soluções da soma ponderada para vários
 valores de $\alpha_2$ (Tabela~\ref{tab:sensibilidade}), que caem sobre a
 fronteira. Perto do extremo de melhor serviço, reduzir um passageiro-hora de
@@ -742,7 +770,9 @@ viagens). A comparação com a grade atual a orçamento igual
 \subsection{Robustez}\label{sec:robustez}
 
 A Tabela~\ref{tab:robustez} repete a instância calibrada com (i) um perfil
-horário típico de corredor, independente da grade atual, e (ii) o modo
+horário típico estilizado de corredor, independente da grade atual
+(Seção~
+ef{sec:dados}), e (ii) o modo
 ``perda''. Em ambos, o número de viagens e o custo da solução ótima variam
 pouco, de modo que o dimensionamento total não depende da circularidade do
 perfil nem da hipótese sobre o comportamento do passageiro não atendido. O teste
@@ -806,13 +836,19 @@ estações, que os dados abertos não permitem verificar; não se pode afirmar, 
 estes dados, que a grade atual seja ineficiente. Segundo, ele depende do nível
 de demanda: no limite inferior a grade atual já atende todos (e o mesmo serviço
 custaria \moEconomiaLambdaZero\% menos), e a partir de
-$\lambda\approx\moLambdaSemGanho$ a frota está saturada e não há ganho de
-serviço possível. Com um perfil horário independente da grade, redistribuir as
-viagens de cada linha ao longo do dia reduz os não atendidos em
-\moReducaoTipicoFixa\%, o que indica que, com dados de demanda por hora, o
-modelo tem valor próprio na distribuição horária sob a restrição de frota. Com
-orçamento livre, a solução ótima oferece ainda mais serviço, por um custo
-\variacaoCusto\% maior.
+$\lambda\approx\moLambdaSemGanho$ a grade atual já usa toda a capacidade das
+suas \viagensGTFS{} viagens; com esse teto de viagens o ótimo não pode atender
+mais ninguém, e o ganho nulo vem do teto, não da frota. Com um perfil horário
+estilizado, independente da grade, redistribuir as viagens de cada linha ao
+longo do dia reduz os não atendidos em \moReducaoTipicoFixa\%, o que indica que,
+com dados de demanda por hora, o modelo tem valor próprio na distribuição
+horária sob a restrição de frota. Com orçamento livre, a solução ótima oferece
+ainda mais serviço, por um custo \variacaoCusto\% maior.
+
+Em suma, com os dados abertos disponíveis não é possível afirmar que o modelo
+supera a operação real da BHTRANS. O modelo é a ferramenta: ele mostra como
+alocar frota e viagens dadas a demanda e as hipóteses; validar uma grade melhor
+que a atual exige a carga medida por trecho e dados de bilhetagem.
 A frota só se torna o gargalo do pico da manhã a partir de
 $\lambda\approx\lambdaGargalo$; no limite inferior da demanda, ela sobra. Para
 ampliar a oferta, articulados extras rendem mais por veículo que Padron, a

@@ -36,7 +36,7 @@
 
 \title{Otimização de Frequências e Tipos de Veículo\\das Linhas Troncais do MOVE no Corredor Antônio Carlos}
 \subtitle{Programação Linear Inteira Mista com Gurobi}
-\author{Pedro Henrique Araujo \and Marcus Vinicius \and Ana Carolina Pessamilio}
+\author{Pedro Henrique Araujo \and Marcus Vinicius Bittencourt \and Ana Carolina Pessamilio}
 \institute{Pesquisa Operacional -- DEE/EE/UFMG}
 \date{Seminário 2 -- 25/11/2026}
 
@@ -140,13 +140,14 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 % ---------------------------------------------------------------- 7
 \begin{frame}{Grade atual $\times$ ótimo com o \emph{mesmo} orçamento}
 \centering
-\resizebox{0.8\linewidth}{!}{\input{tabelas/mesmo_orcamento.tex}}
-\vspace{0.4em}
+{\Large Passageiros perdidos: \moPctGTFS\% $\rightarrow$ \destaque{\moPctOtimo\%} ($-$\moReducaoPerda\%)}\\[0.2em]
+{\small mesmo custo, mesma frota, no máximo as mesmas \viagensGTFS{} viagens ($\lambda=\lambdaCentral$, modo perda)}\\[0.7em]
+\resizebox{0.78\linewidth}{!}{\input{tabelas/mesmo_orcamento_slide.tex}}
+\vspace{0.5em}
 \begin{itemize}\small
-\item Mesmo custo, frota e nº máximo de viagens: perdidos de \moPctGTFS\% $\rightarrow$ \destaque{\moPctOtimo\%} ($-$\moReducaoPerda\%)
 \item \destaque{Mas}: com as viagens de cada linha fixas, ganho de \moReducaoPerdaFixa\% $\Rightarrow$ tudo vem de passar viagens da 52/63 para 51/64/67, ou seja, do \destaque{rateio}
-\item Perfil horário independente da grade: só redistribuir no tempo já dá $-$\moReducaoTipicoFixa\%
-\item Fila: a espera da grade atual se acumula o dia todo (artefato) $\Rightarrow$ só como referência
+\item Perfil horário \destaque{estilizado} (hipótese, independente da grade): só redistribuir no tempo já dá $-$\moReducaoTipicoFixa\%
+\item Modo fila (espera excedente): no apoio, só como referência (artefato do modelo de fila)
 \end{itemize}
 \end{frame}
 
@@ -155,7 +156,7 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \centering
 \includegraphics[width=0.88\textwidth]{demanda_lambda.pdf}
 \begin{itemize}\small
-\item $\lambda=\lambdaCentral$: espera de \esperaMin{} min/pas; frota no limite só às \horaPrecoMax
+\item $\lambda=\lambdaCentral$: espera excedente de \esperaMin{} min/pas (tempo além da capacidade, não a espera na parada); frota no limite só às \horaPrecoMax
 \item Escassez de frota (preço-sombra $>0$) a partir de $\lambda\approx\lambdaGargalo$; no limite inferior, a frota sobra
 \item $\lambda=1$: +10 articulados reduzem a espera de \esperaBaseUm{} para \esperaMaisDezArtUm{} min/pas; corredor +20\%, só para \esperaCorredorUm
 \end{itemize}
@@ -202,20 +203,36 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \end{itemize}
 \column{0.48\textwidth}
 \textbf{Conclusões}
-\begin{itemize}\small
+\begin{itemize}\footnotesize
 \item PLIM exato em $<1$\,s com frota acumulada, fila, corredor e tipos de veículo
 \item Mesmo orçamento: $-$\moReducaoPerda\% de perdidos, mas pela realocação entre linhas, que depende do rateio: \destaque{não prova} que a grade atual é ineficiente
-\item Sem ganho para $\lambda\gtrsim\moLambdaSemGanho$ (frota saturada); em $\lambda=0$, mesmo serviço $-$\moEconomiaLambdaZero\% de custo
+\item Sem ganho para $\lambda\gtrsim\moLambdaSemGanho$: a grade já usa toda a capacidade das \viagensGTFS{} viagens (teto de viagens, não a frota); em $\lambda=0$, mesmo serviço $-$\moEconomiaLambdaZero\% de custo
+\item \destaque{Com dados abertos, não dá para afirmar que o modelo supera a operação real}: o modelo é a ferramenta; validar exige carga por trecho e bilhetagem
 \item Escassez de frota no pico da manhã só para $\lambda\gtrsim\lambdaGargalo$
 \item Frota extra: articulado rende mais por veículo, salvo se o Padron for bem mais barato
 \end{itemize}
 \end{columns}
-\vspace{1em}
+\vspace{0.6em}
 \begin{center}\Large\color{marinho}\textbf{Obrigado! Perguntas?}\end{center}
 \end{frame}
 
 % ================================================================ apoio
 \appendix
+% appendixnumberbeamer reinicia a contagem no apêndice: o rodapé passa a
+% mostrar "Apoio k/n" para não confundir com os slides principais.
+\setbeamertemplate{footline}{%
+  \hfill{\color{cinza}\scriptsize MOVE Antônio Carlos -- Pesquisa Operacional / UFMG \quad Apoio \insertframenumber/\inserttotalframenumber}\hspace{1em}\vspace{0.6em}}
+
+\begin{frame}{Apoio: comparação a orçamento igual no modo fila}
+\centering
+\resizebox{0.85\linewidth}{!}{\input{tabelas/mesmo_orcamento_fila.tex}}
+\vspace{0.8em}
+\begin{itemize}\small
+\item Espera excedente média por passageiro, $\lambda=\lambdaCentral$ (artefato do modelo de fila)
+\item Como cada viagem de uma linha recebe os mesmos embarques, o excesso da grade atual se repete em todas as faixas e a fila cresce o dia inteiro $\Rightarrow$ superestima o ganho
+\item Por isso a manchete usa o modo perda (passageiros perdidos)
+\end{itemize}
+\end{frame}
 
 \begin{frame}{Apoio: dualidade -- quanto vale um ônibus a mais?}
 \centering\scriptsize
@@ -259,7 +276,7 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \item \textbf{A grade da BHTRANS é viável no modelo?} Quase: só a linha \fminAjusteLinha{} às \fminAjusteHora{} fica abaixo do $f^{\min}$ (\fminAjusteGTFS{} $<$ \fminAjusteMin); na comparação, esse $f^{\min}$ é reduzido.
 \item \textbf{Padron sem custo de aquisição?} Sim; por isso o custo de equilíbrio por veículo$\cdot$dia e a sensibilidade ao R\$/km.
 \item \textbf{Embarque $\times$ carga?} Os dados são embarques; o fator de trecho crítico (= 1) não é identificável separado de $\lambda$.
-\item \textbf{Frota necessária não cresce sempre com $\lambda$?} Quando o corredor passa a limitar, parte da espera fica inevitável.
+\item \textbf{Frota necessária de \frotaNecCentral{} com $F=\frotaMax$?} Não é contradição: é a frota que alcançaria o menor não atendimento possível se não houvesse limite; o ótimo usa no máximo \frotaMax. Ela não cresce sempre com $\lambda$ porque, quando o corredor passa a limitar, parte da espera fica inevitável.
 \item \textbf{Por que R\$~\alfaDois/pas$\cdot$h?} Valor do tempo de espera = 100\% da renda horária (US DOT): R\$~\rendaMG/mês em MG (IBGE, 3º tri/2025) $\div$ \horasMes{} h. Com R\$~25, espera de \esperaAlfaVinteCinco{} min/pas.
 \item \textbf{$w_{l,-1}=0$, mas frota cíclica?} Deliberado: o dia útil começa sem fila; os ônibus da madrugada são poucos.
 \end{itemize}
@@ -267,8 +284,9 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 
 \begin{frame}{Apoio: demanda ($\lambda$) e robustez}
 \centering\scriptsize
-\resizebox{\linewidth}{!}{\input{tabelas/demanda_lambda.tex}}
-\vspace{0.8em}
+\resizebox{\linewidth}{!}{\input{tabelas/demanda_lambda.tex}}\\[0.3em]
+{\tiny ``Frota necessária'': menor frota que alcança o menor não atendimento possível com frota ilimitada (corredor e padrão de serviço mantidos); não é a frota usada pelo ótimo, limitada a $F=\frotaMax$.}
+\vspace{0.6em}
 
 \resizebox{0.8\linewidth}{!}{\input{tabelas/robustez.tex}}
 \end{frame}
