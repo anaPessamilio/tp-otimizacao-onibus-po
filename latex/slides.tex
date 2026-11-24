@@ -36,7 +36,7 @@
 
 \title{Otimização de Frequências e Tipos de Veículo\\das Linhas Troncais do MOVE no Corredor Antônio Carlos}
 \subtitle{Programação Linear Inteira Mista com Gurobi}
-\author{Nome 1 \and Nome 2 \and Nome 3} % <- preencher
+\author{Pedro Henrique Araujo \and Marcus Vinicius \and Ana Carolina Pessamilio}
 \institute{Pesquisa Operacional -- DEE/EE/UFMG}
 \date{Seminário 2 -- 25/11/2026}
 
@@ -115,7 +115,7 @@
 \end{itemize}
 \end{columns}
 \vspace{0.3em}
-\small Custos, capacidades, padrão de serviço e $\alpha_2$: \destaque{hipóteses} declaradas (tabela no apoio).
+\small Custos, capacidades e padrão de serviço: \destaque{hipóteses} declaradas; $\alpha_2=$ R\$~\alfaDois/pas$\cdot$h = valor do tempo de espera (IBGE + US DOT). Tabela no apoio.
 \end{frame}
 
 % ---------------------------------------------------------------- 6
@@ -184,7 +184,7 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \begin{itemize}
 \item $\varepsilon$-restrição: min custo s.a. espera $\le \varepsilon$
 \item Perto do melhor serviço, reduzir 1 passageiro-hora custa cerca de R\$~\custoMarginalPareto
-\item Para $\alpha_2$ acima de $\sim$R\$~\custoMarginalPareto, o ganho é marginal $\Rightarrow$ solução \destaque{quase lexicográfica}
+\item Adotado: $\alpha_2=$ R\$~\alfaDois{} (valor do tempo de espera), abaixo desse custo marginal $\Rightarrow$ aceita um pouco mais de espera por custo menor
 \item A fronteira mostra as alternativas
 \end{itemize}
 \end{columns}
@@ -260,7 +260,7 @@ Os cortes fecharam o gap de integralidade de \gapInt\%.
 \item \textbf{Padron sem custo de aquisição?} Sim; por isso o custo de equilíbrio por veículo$\cdot$dia e a sensibilidade ao R\$/km.
 \item \textbf{Embarque $\times$ carga?} Os dados são embarques; o fator de trecho crítico (= 1) não é identificável separado de $\lambda$.
 \item \textbf{Frota necessária não cresce sempre com $\lambda$?} Quando o corredor passa a limitar, parte da espera fica inevitável.
-\item \textbf{Por que R\$~\alfaDois/pas$\cdot$h?} Hipótese; acima de $\sim$R\$~\custoMarginalPareto{} o resultado muda pouco (fronteira).
+\item \textbf{Por que R\$~\alfaDois/pas$\cdot$h?} Valor do tempo de espera = 100\% da renda horária (US DOT): R\$~\rendaMG/mês em MG (IBGE, 3º tri/2025) $\div$ \horasMes{} h. Com R\$~25, espera de \esperaAlfaVinteCinco{} min/pas.
 \item \textbf{$w_{l,-1}=0$, mas frota cíclica?} Deliberado: o dia útil começa sem fila; os ônibus da madrugada são poucos.
 \end{itemize}
 \end{frame}

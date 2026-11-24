@@ -153,7 +153,7 @@ ax.scatter(pond["espera_media_min"], pond["custo_operacional_R$"] / 1000, s=42,
 esc = pond[pond["alpha_2"] == config.ALPHA_2]
 if not esc.empty:
     x, y = esc["espera_media_min"].iloc[0], esc["custo_operacional_R$"].iloc[0] / 1000
-    ax.annotate(f"α₂ = {config.ALPHA_2:g} (adotado)", (x, y), xytext=(25, -18),
+    ax.annotate(f"α₂ = {config.ALPHA_2:.2f} (adotado)".replace(".", ","), (x, y), xytext=(25, -18),
                 textcoords="offset points", fontsize=8, color=TEXTO_2,
                 arrowprops={"arrowstyle": "-", "color": REF, "lw": 0.8})
 ax.set_xlabel("Espera excedente média (min por passageiro)")

@@ -34,7 +34,7 @@
 \newcommand{\tabela}[1]{\resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{\input{#1}}}
 
 \title{Otimização de Frequências e Tipos de Veículo das Linhas Troncais do MOVE\\no Corredor Antônio Carlos com Programação Linear Inteira Mista}
-\author{Pedro Henrique A. Tavares \and \afazer{Nome 2} \and \afazer{Nome 3}\\[4pt]
+\author{Pedro Henrique Araujo \and Marcus Vinicius \and Ana Carolina Pessamilio\\[4pt]
 \small Pesquisa Operacional -- Departamento de Engenharia Elétrica -- UFMG}
 \date{Novembro de 2026}
 
@@ -131,12 +131,76 @@ distribuição da demanda na rede. Neste trabalho, com cinco linhas troncais de 
 mesmo corredor e sem dados de origem e destino, esse roteamento não é modelado:
 a demanda de cada linha é um dado de entrada.
 
-\citet{ceder2016} sistematiza os métodos de definição de frequências usados na
-prática, baseados em dados de carregamento (passageiros no ponto de carga
-máxima) e em padrões de frequência mínima. Esses métodos dimensionam cada linha
-separadamente; a frota disponível não entra como restrição conjunta entre
-linhas, que é o acoplamento tratado neste trabalho.
-\afazer{Conferir no livro e aprofundar.}
+\citet{ibarrarojas2015} revisam a literatura de planejamento, operação e
+controle de sistemas de ônibus, cobrindo os problemas de planejamento da rede
+(projeto de linhas, definição de frequências, programação horária, alocação de
+veículos e de tripulações) e as estratégias de controle em tempo real. Os
+autores observam que a interação entre essas decisões é complexa e leva a
+problemas de difícil tratamento quando resolvidos de forma integrada, o que
+justifica a decomposição em etapas adotada na prática e também aqui: este
+trabalho trata apenas da definição de frequências, com a frota agregada por
+faixa horária, e deixa a programação dos veículos para uma etapa posterior.
+
+\paragraph{Métodos práticos baseados em carregamento.}
+\citet{ceder1984} propõe quatro métodos de definição de frequências a partir de
+contagens de passageiros: dois baseados em contagens em um ponto
+(\emph{point check}), que usam a carga máxima observada na linha, e dois
+baseados em contagens a bordo (\emph{ride check}), que usam o perfil de carga ao
+longo do itinerário. Em todos, a frequência de cada período é a carga de
+referência dividida pela ocupação desejada do veículo, respeitada uma frequência
+mínima de política. Os métodos com perfil de carga exigem dados mais caros de
+coletar, mas descrevem melhor a ocupação ao longo da linha, e por isso tendem a
+resultar em frequências menores que as obtidas pela carga máxima. Esses métodos estão
+sistematizados no livro de \citet{ceder2016}, no capítulo sobre determinação de
+frequências e intervalos. A restrição de atendimento deste trabalho
+\eqref{eq:demanda} generaliza o método da carga máxima: $d_{lt}$ faz o papel
+da carga no trecho crítico e $f^{\min}_{lt}$, o da frequência mínima. A
+diferença é que os métodos de Ceder dimensionam cada linha e cada período
+separadamente, sem limite de frota; aqui, a frota acumulada \eqref{eq:frota}
+acopla linhas e faixas horárias, e o modelo decide onde a frota escassa rende
+mais. Como não há contagens a bordo nem no ponto de carga máxima para o MOVE, a
+carga é aproximada pelos embarques (Seção~\ref{sec:dados}), o que corresponde
+à hipótese mais conservadora do método da carga máxima.
+
+\paragraph{Alocação da frota entre linhas e períodos.}
+\citet{furth1981} revisam as abordagens práticas e teóricas de definição de
+frequências e propõem um modelo que distribui os ônibus disponíveis entre
+períodos do dia e entre linhas, maximizando o benefício social líquido -- o
+benefício dos passageiros atraídos mais a economia de tempo de espera --,
+sujeito a restrições de subsídio total, de tamanho da frota e de ocupação dos
+veículos. O modelo é não linear e, além de definir frequências, permite avaliar
+o efeito de outra capacidade de veículo ou de outras políticas de serviço. Sua
+principal limitação é supor linhas independentes: a demanda de uma linha
+depende só da sua própria frequência. O presente trabalho compartilha a ideia
+central -- a frota é o recurso que se distribui entre linhas e horários --, mas
+com demanda fixa, objetivo linear e variáveis inteiras, o que permite resolver
+o problema de forma exata; em troca, não captura a demanda induzida por mais
+oferta.
+
+\citet{verbas2013} estendem essa linha de trabalho com uma formulação de
+alocação ótima de frequências entre as linhas de uma rede e os períodos do dia
+em que cada linha pode ter vários padrões de serviço (por exemplo, parador,
+expresso e retorno antecipado), distribuindo a oferta no espaço e no tempo; o
+objetivo valoriza o aumento de demanda e a economia de tempo de espera. Essa
+ideia se aplica diretamente ao MOVE: a linha 51 tem viagens ``Direta'' no pico,
+que aqui são agregadas à linha por médias ponderadas de extensão e ciclo
+(Seção~\ref{sec:dados}). Tratar cada variante como um padrão próprio, com a sua
+frequência, é uma extensão natural do modelo.
+
+\paragraph{Tamanho do veículo.}
+\citet{dellolio2012} retomam o problema de dimensionar o tamanho dos ônibus,
+frequente nos anos 1980 e depois pouco estudado, com um modelo de otimização em
+dois níveis que atribui ônibus de tamanhos diferentes às linhas e define os
+intervalos de cada linha de acordo com a demanda observada, com restrições de
+capacidade dos veículos. Aplicado a um caso real, o modelo gera recomendações
+para a gestão de uma frota mista. Como aqui, o tipo de veículo é uma decisão do
+modelo; a diferença é que o nível inferior do modelo de dell'Olio et al.
+representa a reação dos passageiros à oferta, enquanto o presente trabalho, com
+demanda fixa, tem um único nível e é linear. Os cenários com ônibus Padron
+(Seção~\ref{sec:resultados}) mostram o mesmo tipo de \emph{trade-off}: veículos
+menores e mais baratos por quilômetro reduzem o custo quando acrescentados à
+frota, mas substituir articulados por Padron piora o atendimento, porque a
+capacidade por veículo é decisiva nas horas de frota escassa.
 
 \paragraph{Projeto de rede e frequências com metaheurísticas.}
 Quando o traçado das linhas e as frequências são decididos em conjunto para uma
@@ -166,14 +230,11 @@ se impõe, com a rede fixada a partir do GTFS a definição de frequências e o
 dimensionamento da frota podem ser formulados como um PLIM. Isso permite
 incorporar restrições rígidas de capacidade dos veículos e de disponibilidade de
 frota e obter soluções com otimalidade provada em tempo computacional reduzido.
-
-\afazer{A revisão é avaliada como pesquisa bibliográfica do grupo: um parágrafo
-por referência, discutindo de forma crítica o modelo, a ferramenta de solução e
-os resultados de cada trabalho. Meta: 6 a 8 trabalhos; faltam de 3 a 5.
-Sugestões de busca (Google Scholar, Periódicos CAPES): ``frequency setting
-problem'', ``transit frequency optimization'', ``mixed fleet'' / ``vehicle type
-frequency setting'', revisões sobre planejamento de ônibus e trabalhos
-brasileiros sobre BRT.}
+Em relação aos trabalhos acima, as contribuições específicas são a frota
+contabilizada ao longo de todo o ciclo de cada viagem, que acopla faixas
+horárias consecutivas, a fila de passageiros entre faixas e a combinação, num
+mesmo modelo exato, da alocação da frota entre linhas e horários
+\citep{furth1981} com a escolha do tipo de veículo \citep{dellolio2012}.
 
 % =====================================================================
 \section{Descrição do problema e modelagem}\label{sec:modelo}
@@ -435,7 +496,7 @@ solução ótima reduz a espera para \esperaMin{} minuto com custo
 \variacaoCusto\% maior. No modo perda, a grade perderia \pctPerdidosGTFS\% dos
 passageiros, contra \pctPerdidosOtimo\% da solução ótima. Essa comparação,
 porém, não é a mais justa: a solução ótima gasta mais e o ganho em $Z$ depende do
-peso hipotético $\alpha_2$. Além disso, a espera de \esperaMinGTFS{} minutos da
+valor atribuído ao tempo de espera ($\alpha_2$). Além disso, a espera de \esperaMinGTFS{} minutos da
 grade atual é, em boa parte, um efeito do modelo de fila: como cada viagem de
 uma linha recebe o mesmo número de embarques, o excesso sobre a capacidade se
 repete em todas as faixas e a fila cresce o dia inteiro sem se dissipar. Por
@@ -636,9 +697,30 @@ ponderada se comporta, na prática, de forma quase lexicográfica (primeiro
 minimiza a espera, depois o custo). A fronteira explicita o \emph{trade-off} que
 a soma ponderada esconde: um gestor que atribua ao passageiro-hora um valor
 menor escolheria pontos mais à direita.
-\afazer{Justificar $\alpha_2=$ R\$~\alfaDois{} por passageiro-hora (por exemplo,
-como valor do tempo do passageiro) com uma referência, ou adotar um valor
-fundamentado e rodar de novo.}
+
+\paragraph{Escolha de $\alpha_2$.} Com $\alpha_1=1$, $\alpha_2$ é o valor
+monetário de um passageiro-hora de espera excedente, ou seja, o valor do tempo
+de espera. A orientação do Departamento de Transportes dos Estados Unidos
+\citep{usdot2003} recomenda valorar o tempo de caminhada, espera e transbordo no
+transporte coletivo em 100\% da renda horária, o dobro dos 50\% usados para o
+tempo de viagem pessoal local, em linha com a convenção, discutida por
+\citet{wardman2004}, de valorar a espera em cerca de duas vezes o tempo dentro do
+veículo. Para a renda, usa-se o rendimento médio real habitual de todos os
+trabalhos em Minas Gerais no 3º trimestre de 2025, R\$~\rendaMG{} por mês
+\citep{ibge2025}, dividido pelas \horasMes{} horas mensais da jornada legal de
+44 horas semanais. Isso dá $\alpha_2=$ R\$~\alfaDois{} por passageiro-hora,
+valor adotado. Como esse valor fica abaixo do custo marginal de
+R\$~\custoMarginalPareto{} perto do extremo de melhor serviço, a solução adotada
+não é o ponto de menor espera da fronteira: ela aceita um pouco mais de espera
+em troca de custo menor. Há duas razões para o valor ser conservador: a espera
+de quem não consegue embarcar num ônibus lotado tende a ser percebida como mais
+penosa que a espera comum, e o salário médio do estado pode diferir da renda dos
+usuários do MOVE. Por isso, a Tabela~\ref{tab:sensibilidade} mostra a solução
+para $\alpha_2$ de R\$~0{,}50 a R\$~50: com $\alpha_2=$ R\$~25, por exemplo, a
+espera cairia de \esperaMin{} para \esperaAlfaVinteCinco{} minuto por passageiro,
+com custo de R\$~\custoAlfaVinteCinco{} por dia (\viagensAlfaVinteCinco{}
+viagens). A comparação com a grade atual a orçamento igual
+(Seção~\ref{sec:mesmo_orcamento}) não depende de $\alpha_2$.
 
 \begin{figure}[htbp]
 \centering

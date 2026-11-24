@@ -4,9 +4,9 @@ linha,faixa_horaria,demanda,dual_R2,c_por_lugar,regime
 51,2,402,2.427,2.427,= c/C: frota com folga
 51,3,268,2.427,2.427,= c/C: frota com folga
 51,4,670,2.452,2.452,= c/C: frota com folga
-51,5,1340,5.032,2.345,> c/C: frota ou corredor no limite
-51,6,2413,38.037,2.304,> c/C: frota ou corredor no limite
-51,7,2681,25.545,2.305,> c/C: frota ou corredor no limite
+51,5,1340,3.832,2.345,> c/C: frota ou corredor no limite
+51,6,2413,22.077,2.304,> c/C: frota ou corredor no limite
+51,7,2681,15.165,2.305,> c/C: frota ou corredor no limite
 51,8,2144,2.318,2.318,= c/C: frota com folga
 51,9,1340,2.419,2.419,= c/C: frota com folga
 51,10,1206,2.396,2.396,= c/C: frota com folga
@@ -28,9 +28,9 @@ linha,faixa_horaria,demanda,dual_R2,c_por_lugar,regime
 52,2,0,0.0,1.76,sem demanda
 52,3,0,0.0,1.76,sem demanda
 52,4,0,0.0,1.76,sem demanda
-52,5,542,1.762,1.76,> c/C: frota ou corredor no limite
-52,6,1193,25.462,1.76,> c/C: frota ou corredor no limite
-52,7,1193,25.0,1.76,fila: passageiros esperando
+52,5,542,1.761,1.76,> c/C: frota ou corredor no limite
+52,6,1193,14.876,1.76,> c/C: frota ou corredor no limite
+52,7,1193,14.62,1.76,fila: passageiros esperando
 52,8,542,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
 52,9,326,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
 52,10,326,0.0,1.76,< c/C: capacidade sobra (padrão de serviço)
@@ -52,9 +52,9 @@ linha,faixa_horaria,demanda,dual_R2,c_por_lugar,regime
 63,2,108,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
 63,3,108,0.0,3.261,< c/C: capacidade sobra (padrão de serviço)
 63,4,326,3.17,3.17,= c/C: frota com folga
-63,5,760,13.346,2.913,> c/C: frota ou corredor no limite
-63,6,977,46.863,2.913,> c/C: frota ou corredor no limite
-63,7,1085,26.153,2.913,fila: passageiros esperando
+63,5,760,8.686,2.913,> c/C: frota ou corredor no limite
+63,6,977,27.233,2.913,> c/C: frota ou corredor no limite
+63,7,1085,15.773,2.913,fila: passageiros esperando
 63,8,651,1.153,2.913,< c/C: capacidade sobra (padrão de serviço)
 63,9,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
 63,10,326,0.0,2.913,< c/C: capacidade sobra (padrão de serviço)
@@ -75,10 +75,10 @@ linha,faixa_horaria,demanda,dual_R2,c_por_lugar,regime
 64,1,0,0.0,3.779,sem demanda
 64,2,0,0.0,3.779,sem demanda
 64,3,0,0.0,3.779,sem demanda
-64,4,438,7.313,4.131,> c/C: frota ou corredor no limite
-64,5,1167,32.998,3.706,> c/C: frota ou corredor no limite
-64,6,1897,49.956,3.476,> c/C: frota ou corredor no limite
-64,7,1751,26.813,3.573,> c/C: frota ou corredor no limite
+64,4,438,5.892,4.131,> c/C: frota ou corredor no limite
+64,5,1167,19.915,3.706,> c/C: frota ou corredor no limite
+64,6,1897,29.196,3.476,> c/C: frota ou corredor no limite
+64,7,1751,16.433,3.573,> c/C: frota ou corredor no limite
 64,8,1021,3.906,3.906,= c/C: frota com folga
 64,9,876,3.906,3.906,= c/C: frota com folga
 64,10,876,3.906,3.906,= c/C: frota com folga
@@ -100,9 +100,9 @@ linha,faixa_horaria,demanda,dual_R2,c_por_lugar,regime
 67,2,0,0.0,3.297,sem demanda
 67,3,0,0.0,3.297,sem demanda
 67,4,0,0.0,3.297,sem demanda
-67,5,1408,20.848,3.258,> c/C: frota ou corredor no limite
-67,6,1830,48.687,3.137,> c/C: frota ou corredor no limite
-67,7,1548,26.45,3.21,> c/C: frota ou corredor no limite
+67,5,1408,12.992,3.258,> c/C: frota ou corredor no limite
+67,6,1830,28.343,3.137,> c/C: frota ou corredor no limite
+67,7,1548,16.07,3.21,> c/C: frota ou corredor no limite
 67,8,1408,3.183,3.183,= c/C: frota com folga
 67,9,563,3.483,3.483,= c/C: frota com folga
 67,10,563,3.483,3.483,= c/C: frota com folga

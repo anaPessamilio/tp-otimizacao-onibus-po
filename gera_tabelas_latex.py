@@ -99,8 +99,8 @@ linhas = [["Parâmetro", "Valor", "Origem"],
            f"($\\ge{fmin['pico']}$/h), {config.INTERVALO_MAX_MIN['dia']} min de dia ($\\ge{fmin['dia']}$/h) e "
            f"{config.INTERVALO_MAX_MIN['noite']} min à noite ($\\ge{fmin['noite']}$/h)", "Hipótese"],
           [r"$f^{\max}_{lt}$", f"{config.F_MAX} partidas/h por linha (intervalo de 2,5 min)", "Hipótese"],
-          [r"$\alpha_1$, $\alpha_2$", f"{br(config.ALPHA_1, 0)}; R\\$ {br(config.ALPHA_2, 0)} por passageiro-hora",
-           "Hipótese"]]
+          [r"$\alpha_1$, $\alpha_2$", f"{br(config.ALPHA_1, 0)}; R\\$ {br(config.ALPHA_2, 2)} por passageiro-hora "
+           f"(valor do tempo de espera: 100\\% da renda horária)", "IBGE + US DOT"]]
 escrever("parametros_fontes.tex", tabular(r"p{3.4cm}p{8.0cm}p{2.6cm}", linhas))
 
 # ------------------------------------------------------------------ parâmetros por linha
@@ -337,7 +337,7 @@ numeros = {
     "regimeSemDemanda": str(reg.get("sem demanda", 0)),
     "nPares": str(len(dual_r2)),
     "custoMarginalPareto": br(cm),
-    "alfaUm": br(config.ALPHA_1, 0), "alfaDois": br(config.ALPHA_2, 0),
+    "alfaUm": br(config.ALPHA_1, 0), "alfaDois": br(config.ALPHA_2, 2),
     "margemTerminal": br(100 * (config.MARGEM_TERMINAL - 1), 0),
     "nVarInt": str(len(inst) * len(config.TIPOS_VEICULO)), "nVarCont": str(len(inst)),
     "versaoGurobi": ".".join(str(x) for x in gp.gurobi.version()),
@@ -389,6 +389,16 @@ numeros.update({
     "nFminAjustados": str(len(mo_fmin)),
     "gapMaxCenarios": br(cen.loc[~cen.otimo_provado, "gap_pct"].max(), 2)
                       if (~cen.otimo_provado).any() else "0",
+})
+
+# justificativa de α2 (valor do tempo de espera) e comparação com α2 = 25
+s25 = sens.iloc[(sens.alpha_2 - 25.0).abs().argmin()]
+numeros.update({
+    "rendaMG": br(config.RENDA_MENSAL_MG, 0),
+    "horasMes": str(config.HORAS_MES),
+    "esperaAlfaVinteCinco": br(s25.espera_media_min, 2),
+    "custoAlfaVinteCinco": br(s25["custo_operacional_R$"], 0),
+    "viagensAlfaVinteCinco": br(s25.viagens_totais, 0),
 })
 
 nl = re.search(r"Optimize a model with (\d+) rows", log)

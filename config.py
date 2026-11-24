@@ -113,6 +113,15 @@ TEMPO_LIMITE_S = 60
 
 # ---------- Pesos da função objetivo ----------
 ALPHA_1 = 1.0  # peso do custo operacional (R$)
-# [HIPÓTESE] penalidade por passageiro-hora de espera (R$). Calibrada pela
-# fronteira de Pareto (analise_pareto.py) e pela sensibilidade.
-ALPHA_2 = 25.0
+# Penalidade por passageiro-hora de espera (R$) = valor do tempo de espera.
+# A orientação do US DOT (Revision 1, 2003) valora caminhada, espera e
+# transbordo do transporte coletivo em 100% da renda horária (o dobro dos 50%
+# do tempo de viagem pessoal local). Renda: rendimento médio real habitual de
+# todos os trabalhos em Minas Gerais, 3º tri/2025 (IBGE, PNAD Contínua,
+# divulgado em 14/11/2025) [IBGE], dividido pelas 220 h mensais da jornada
+# legal de 44 h semanais (CLT). Testado em analise_sensibilidade_alpha.py e
+# analise_pareto.py.
+RENDA_MENSAL_MG = 3217.0   # R$/mês [IBGE]
+HORAS_MES = 220            # h/mês [CLT]
+FRACAO_RENDA_ESPERA = 1.0  # 100% da renda horária [US DOT]
+ALPHA_2 = round(FRACAO_RENDA_ESPERA * RENDA_MENSAL_MG / HORAS_MES, 2)  # R$ 14,62
